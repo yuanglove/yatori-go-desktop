@@ -1,0 +1,19 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "yatori-go-desktop",
+  "outputfilename": "yatori-go-desktop",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "yatori-dev"
+  },
+  "info": {
+    "companyName": "yatori-dev",
+    "productName": "Yatori 学习管理工具",
+    "productVersion": "1.0.0",
+    "copyright": "yatori-dev",
+    "comments": "合规学习任务管理桌面工具"
+  }
+}
