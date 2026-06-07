@@ -486,6 +486,7 @@ export namespace service {
 	    logLevel: string;
 	    logModel: number;
 	    webModel: number;
+	    theme?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new BasicSetting(source);
@@ -499,6 +500,7 @@ export namespace service {
 	        this.logLevel = source["logLevel"];
 	        this.logModel = source["logModel"];
 	        this.webModel = source["webModel"];
+	        this.theme = source["theme"];
 	    }
 	}
 	export class Setting {
