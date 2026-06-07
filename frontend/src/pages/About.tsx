@@ -20,18 +20,19 @@ function btn(label: string, onClick: () => void, disabled = false) {
 export default function About() {
   const [checking, setChecking] = useState(false)
   const [updateText, setUpdateText] = useState('')
+  const [updateUrl, setUpdateUrl] = useState('')
   const open = (url: string) => OpenURL(url)
   const openData = () => OpenDataDir()
 
   const checkUpdate = async () => {
     setChecking(true)
     setUpdateText('')
+    setUpdateUrl('')
     try {
       const info = await checkForUpdates()
       if (info.hasUpdate) {
-        const text = `发现新版本 v${info.latestVersion}，当前版本 v${info.currentVersion}`
-        setUpdateText(text)
-        window.alert(`${text}\n可以点击“查看更新日志”下载新版。`)
+        setUpdateText(`发现新版本 v${info.latestVersion}，当前版本 v${info.currentVersion}`)
+        setUpdateUrl(info.url || PROJECT_RELEASES_URL)
       } else {
         setUpdateText(`当前已是最新版本 v${info.currentVersion}`)
       }
@@ -88,6 +89,11 @@ export default function About() {
         <h3>版本信息</h3>
         <p>当前版本：<strong>v{APP_VERSION}</strong></p>
         {updateText && <p style={{ color: 'var(--text2)' }}>{updateText}</p>}
+        {updateUrl && (
+          <button className="btn btn-primary btn-sm" onClick={() => open(updateUrl)}>
+            去更新
+          </button>
+        )}
       </section>
 
       <section>

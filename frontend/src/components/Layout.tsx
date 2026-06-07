@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api, type UpdateInfo } from '../lib/api'
 import { autoCheckForUpdates } from '../lib/update'
 import { applyTheme } from '../lib/theme'
+import { PROJECT_RELEASES_URL } from '../lib/version'
 
 const links = [
   { to: '/', label: '仪表盘', icon: '▦' },
@@ -14,13 +15,22 @@ const links = [
 ]
 
 export default function Layout() {
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+
   useEffect(() => {
     applyTheme(localStorage.getItem('yatori-theme') || 'dark')
     api.getConfig().then(r => {
       if (r.ok) applyTheme(r.data.setting.basicSetting.theme || 'dark')
     }).catch(() => applyTheme(localStorage.getItem('yatori-theme') || 'dark'))
-    autoCheckForUpdates()
+    autoCheckForUpdates().then(info => {
+      if (info) setUpdateInfo(info)
+    })
   }, [])
+
+  const openUpdate = () => {
+    api.openURL(updateInfo?.url || PROJECT_RELEASES_URL)
+    setUpdateInfo(null)
+  }
 
   return (
     <div className="layout">
@@ -44,6 +54,18 @@ export default function Layout() {
       <main className="main">
         <Outlet />
       </main>
+      {updateInfo && (
+        <div className="update-toast" role="dialog" aria-label="发现新版本">
+          <div className="update-toast-title">发现新版本</div>
+          <div className="update-toast-body">
+            当前 v{updateInfo.currentVersion}，最新 v{updateInfo.latestVersion}
+          </div>
+          <div className="update-toast-actions">
+            <button className="btn btn-ghost btn-sm" onClick={() => setUpdateInfo(null)}>稍后</button>
+            <button className="btn btn-primary btn-sm" onClick={openUpdate}>去更新</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

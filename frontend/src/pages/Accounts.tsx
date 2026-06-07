@@ -42,6 +42,9 @@ export default function AccountsPage() {
 
   const handleSave = async () => {
     if (!editing) return
+    if (editing.accountType === 'YINGHUA' && !editing.url.trim()) {
+      setErr('英华平台必须填写学校入口地址（平台 URL）'); return
+    }
     setSaving(true); setErr('')
     const r = editing.uid ? await api.updateAccount(editing) : await api.addAccount(editing)
     setSaving(false)
@@ -128,8 +131,9 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 {PLATFORMS.map(p => <option key={p.code} value={p.code}>{p.name} ({p.code})</option>)}
               </select>
             </FormGroup>
-            <FormGroup label="平台 URL">
-              <input className="form-input" value={req.url} placeholder="部分平台必填"
+            <FormGroup label={req.accountType === 'YINGHUA' ? '平台 URL *（英华必填）' : '平台 URL'}>
+              <input className="form-input" value={req.url}
+                placeholder={req.accountType === 'YINGHUA' ? '必填，如 https://xxx.yinghuaxuetang.com' : '部分平台必填'}
                 onChange={e => set('url', e.target.value)} />
             </FormGroup>
           </div>

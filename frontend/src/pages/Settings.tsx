@@ -146,6 +146,26 @@ export default function SettingsPage() {
         </div>
       </Section>
 
+      <Section title="任务并发">
+        <div className="alert alert-info" style={{ marginBottom: 12 }}>
+          控制桌面端最多同时运行几个账号任务。超过上限时，新任务会被拒绝启动；停止或任务结束后会释放名额。
+        </div>
+        <FormGroup label="最大同时运行任务数 (1-10)">
+          <input
+            className="form-input"
+            type="number"
+            min={1}
+            max={10}
+            step={1}
+            value={cfg.setting.basicSetting.maxWorkers ?? 3}
+            onChange={e => {
+              const next = Number(e.target.value || 3)
+              setBasic('maxWorkers', Math.min(10, Math.max(1, next)))
+            }}
+          />
+        </FormGroup>
+      </Section>
+
       <Section title="AI 设置">
         {testMsg && <div className={testOk ? 'alert alert-info' : 'alert alert-warn'}>{testOk ? '通过 ' : '失败 '}{testMsg}</div>}
         <div className="form-row form-row-2">

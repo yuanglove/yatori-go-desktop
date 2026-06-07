@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	consoleConfig "yatori-go-console/config"
+	coreUtils "github.com/yatori-dev/yatori-go-core/utils"
 	"github.com/yatori-dev/yatori-go-core/aggregation/yinghua"
 	xuexitongApiPkg "github.com/yatori-dev/yatori-go-core/api/xuexitong"
 	yinghuaApiPkg "github.com/yatori-dev/yatori-go-core/api/yinghua"
@@ -24,6 +26,13 @@ func runWorker(uid string) int {
 	p := func(format string, args ...interface{}) {
 		fmt.Println(workerLog(format, args...))
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			p("worker panic: %v", r)
+			p("stack:\n%s", debug.Stack())
+		}
+	}()
 
 	if err := service.InitDB(); err != nil {
 		p("初始化数据库失败: %s", err)
@@ -118,11 +127,27 @@ func runWorker(uid string) int {
 		runErr = service.SafeRun(context.Background(), setting, &user, xxtCache, submitThreshold, emit)
 
 	case "YINGHUA":
+		// 英华登录验证码会触发 OCR，必须在 worker 子进程内初始化。
+		p("初始化 Core Runtime...")
+		coreUtils.YatoriCoreInit()
+		p("Core Runtime 初始化完成")
+
+		p("英华参数: URL=%q Account=%q PasswordEnc空=%v 密码长度=%d",
+			po.URL, po.Account, po.PasswordEnc == "", len(service.DecodePassword(po.PasswordEnc)))
+		if po.URL == "" {
+			p("英华 URL 为空，无法登录（请在账号管理中填写学校入口地址）")
+			return 1
+		}
+		if po.PasswordEnc == "" {
+			p("英华密码未保存，无法登录")
+			return 1
+		}
 		yhCache := &yinghuaApiPkg.YingHuaUserCache{
 			PreUrl:   po.URL,
 			Account:  po.Account,
 			Password: service.DecodePassword(po.PasswordEnc),
 		}
+		p("英华 cache 构建完成，PreUrl=%q", yhCache.PreUrl)
 		if err := yinghua.YingHuaLoginAction(yhCache); err != nil {
 			p("英华登录失败: %s", err)
 			return 1

@@ -14,9 +14,7 @@ export async function autoCheckForUpdates() {
   sessionStorage.setItem('yatori-update-checked', '1')
   try {
     const info = await checkForUpdates()
-    if (info.hasUpdate) {
-      window.alert(`发现新版本 v${info.latestVersion}\n当前版本 v${info.currentVersion}\n请在“关于本项目”页面打开更新日志下载新版。`)
-    }
+    return info.hasUpdate ? info : undefined
   } catch {
     // 自动检查失败时保持静默，避免影响启动。
   }
