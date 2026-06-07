@@ -25,13 +25,17 @@ func getXueXiTongCourses(po AccountPO) ([]CourseVO, error) {
 	vos := make([]CourseVO, 0, len(list))
 	for _, c := range list {
 		vos = append(vos, CourseVO{
-			Platform:   "XUEXITONG",
-			Key:        c.Key,
-			CourseID:   c.CourseID,
-			CourseName: c.CourseName,
-			JobRate:    c.JobRate,
-			State:      c.State,
-			IsStart:    c.IsStart,
+			Platform:       "XUEXITONG",
+			Key:            c.Key,
+			CourseID:       c.CourseID,
+			CourseName:     c.CourseName,
+			CourseTeacher:  c.CourseTeacher,
+			JobFinishCount: c.JobFinishCount,
+			JobCount:       c.JobCount,
+			JobRate:        c.JobRate,
+			HasProgress:    true,
+			State:          c.State,
+			IsStart:        c.IsStart,
 		})
 	}
 	return vos, nil

@@ -3,17 +3,18 @@ package service
 import "fmt"
 
 type CourseVO struct {
-	Platform      string  `json:"platform"`
-	Key           string  `json:"key"`
-	CourseID      string  `json:"courseId"`
-	CourseName    string  `json:"courseName"`
-	CourseTeacher string  `json:"courseTeacher"`
-	JobFinishCount int    `json:"jobFinishCount"`
-	JobCount       int    `json:"jobCount"`
+	Platform       string  `json:"platform"`
+	Key            string  `json:"key"`
+	CourseID       string  `json:"courseId"`
+	CourseName     string  `json:"courseName"`
+	CourseTeacher  string  `json:"courseTeacher"`
+	JobFinishCount int     `json:"jobFinishCount"`
+	JobCount       int     `json:"jobCount"`
 	JobRate        float64 `json:"jobRate"`
-	State          int    `json:"state"`
-	IsStart        bool   `json:"isStart"`
-	RawStatusText  string `json:"rawStatusText,omitempty"`
+	HasProgress    bool    `json:"hasProgress"`
+	State          int     `json:"state"`
+	IsStart        bool    `json:"isStart"`
+	RawStatusText  string  `json:"rawStatusText,omitempty"`
 }
 
 func GetCourses(uid string) ([]CourseVO, error) {

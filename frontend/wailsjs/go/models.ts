@@ -670,6 +670,7 @@ export namespace service {
 	    jobFinishCount: number;
 	    jobCount: number;
 	    jobRate: number;
+	    hasProgress: boolean;
 	    state: number;
 	    isStart: boolean;
 	    rawStatusText?: string;
@@ -688,6 +689,7 @@ export namespace service {
 	        this.jobFinishCount = source["jobFinishCount"];
 	        this.jobCount = source["jobCount"];
 	        this.jobRate = source["jobRate"];
+	        this.hasProgress = source["hasProgress"];
 	        this.state = source["state"];
 	        this.isStart = source["isStart"];
 	        this.rawStatusText = source["rawStatusText"];

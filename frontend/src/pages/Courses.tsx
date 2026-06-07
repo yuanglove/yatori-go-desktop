@@ -124,7 +124,7 @@ export default function CoursesPage() {
                   <td style={td}>{c.courseName || '—'}</td>
                   <td style={td}>{c.courseTeacher || '—'}</td>
                   <td style={td}>
-                    {c.jobCount > 0 ? `${c.jobFinishCount}/${c.jobCount}` : (c.rawStatusText || '—')}
+                    {c.jobCount > 0 ? `${c.jobFinishCount}/${c.jobCount}` : (c.hasProgress ? '任务数未返回' : (c.rawStatusText || '—'))}
                   </td>
                   <td style={td}>
                     {!c.isStart
@@ -134,7 +134,7 @@ export default function CoursesPage() {
                         : <span style={{ color: 'var(--success, #4caf50)' }}>进行中</span>}
                   </td>
                   <td style={td}>
-                    {c.jobCount > 0 ? (
+                    {c.hasProgress ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ flex: 1, height: 6, background: 'var(--bg-secondary, rgba(0,0,0,.2))', borderRadius: 3, overflow: 'hidden' }}>
                           <div style={{

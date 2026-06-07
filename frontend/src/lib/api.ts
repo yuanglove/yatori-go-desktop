@@ -33,7 +33,7 @@ export interface TaskStatus {
 export interface Dashboard { totalAccounts:number; runningTasks:number; configPath:string; configOK:boolean; recentLogs:string[] }
 export interface PlatformInfo { code:string; name:string; guiSupport:string; note:string }
 export interface UpdateInfo { hasUpdate:boolean; latestVersion:string; currentVersion:string; url:string }
-export interface CourseVO { platform:string; key:string; courseId:string; courseName:string; courseTeacher:string; jobFinishCount:number; jobCount:number; jobRate:number; state:number; isStart:boolean; rawStatusText:string }
+export interface CourseVO { platform:string; key:string; courseId:string; courseName:string; courseTeacher:string; jobFinishCount:number; jobCount:number; jobRate:number; hasProgress:boolean; state:number; isStart:boolean; rawStatusText:string }
 
 export interface BoolResult           { ok:boolean; error?:string }
 export interface StringResult         { ok:boolean; data:string;         error?:string }
