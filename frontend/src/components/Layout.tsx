@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { api } from '../lib/api'
+import { autoCheckForUpdates } from '../lib/update'
 import { applyTheme } from '../lib/theme'
 
 const links = [
@@ -18,6 +19,7 @@ export default function Layout() {
     api.getConfig().then(r => {
       if (r.ok) applyTheme(r.data.setting.basicSetting.theme || 'dark')
     }).catch(() => applyTheme(localStorage.getItem('yatori-theme') || 'dark'))
+    autoCheckForUpdates()
   }, [])
 
   return (
