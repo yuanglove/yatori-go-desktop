@@ -22,6 +22,10 @@ export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
 
+export function GetCourses(arg1) {
+  return window['go']['main']['App']['GetCourses'](arg1);
+}
+
 export function GetDashboard() {
   return window['go']['main']['App']['GetDashboard']();
 }

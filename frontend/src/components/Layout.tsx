@@ -9,6 +9,7 @@ const links = [
   { to: '/', label: '仪表盘', icon: '▦' },
   { to: '/accounts', label: '账号管理', icon: '👤' },
   { to: '/tasks', label: '任务控制', icon: '▶' },
+  { to: '/courses', label: '课程进度', icon: '📊' },
   { to: '/logs', label: '日志中心', icon: '≡' },
   { to: '/settings', label: '全局设置', icon: '⚙' },
   { to: '/about', label: '关于本项目', icon: 'ⓘ' },

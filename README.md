@@ -8,7 +8,7 @@ Yatori Go Desktop 是基于 [yatori-dev/yatori-go-console](https://github.com/ya
 
 ## 当前版本
 
-v0.2.5
+v0.2.7
 
 ## 本项目做了什么
 
@@ -17,6 +17,7 @@ v0.2.5
 - 增加账号管理、任务控制、日志中心、全局设置、关于本项目页面。
 - 通过 worker 子进程执行任务，任务停止采用硬停止方式。
 - 支持学习通、英华学堂、海旗科技、WeLearn 随行课堂及更多原项目平台的桌面任务入口。
+- 新增课程进度页面，支持学习通、英华学堂、海旗科技、WeLearn 随行课堂课程列表和进度展示。
 - 支持学习通章节测验 AI / 题库答题配置。
 - 支持 9 套主题，并在全局设置中持久化保存。
 - 增加 GitHub 自动检测新版本和手动检测入口。
@@ -36,6 +37,11 @@ yatori-go-desktop/
 │   ├── config_service.go           config.yaml 读写、默认值、校验
 │   ├── log_service.go              日志缓冲、文件 tail、乱码修复
 │   ├── task_manager.go             任务生命周期、worker 子进程启动与硬停止
+│   ├── course_service.go           课程进度平台分发入口
+│   ├── course_xxt.go               学习通课程进度适配
+│   ├── course_yinghua.go           英华学堂课程进度适配
+│   ├── course_hqkj.go              海旗科技课程进度适配
+│   ├── course_welearn.go           WeLearn 随行课堂课程进度适配
 │   ├── platform.go                 平台支持状态表
 │   ├── worker_helpers.go           worker 构建用户和平台对象的辅助方法
 │   ├── xxt_runner.go               学习通安全 runner
@@ -43,7 +49,7 @@ yatori-go-desktop/
 │   └── other_runners.go            其他平台 worker 入口
 ├── frontend/
 │   ├── src/components/Layout.tsx    主布局、导航、启动时主题和版本检测
-│   ├── src/pages/                  仪表盘、账号、任务、日志、设置、关于页面
+│   ├── src/pages/                  仪表盘、账号、任务、课程进度、日志、设置、关于页面
 │   ├── src/lib/api.ts              前端调用 Wails Go 方法的封装
 │   ├── src/lib/theme.ts            主题列表与主题应用
 │   ├── src/lib/update.ts           GitHub 版本检测
@@ -96,6 +102,7 @@ taskkill /T /F 结束 worker 子进程树
 | 账号管理 | 支持 | 增删改账号和平台配置 |
 | 任务控制 | 支持 | 启动、硬停止、状态展示 |
 | 日志中心 | 支持 | 历史日志 + 实时日志 |
+| 课程进度 | 支持 | 学习通、英华学堂、海旗科技、WeLearn 随行课堂已接入 |
 | 全局设置 | 支持 | AI、题库、邮件、日志、主题 |
 | 主题切换 | 支持 | 9 套主题，保存到 config.yaml |
 | 版本检测 | 支持 | 自动从 GitHub Releases/Tags 检测新版本 |

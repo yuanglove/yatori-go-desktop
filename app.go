@@ -300,6 +300,20 @@ func (a *App) OpenURL(url string) BoolResult {
 	return BoolResult{Ok: true}
 }
 
+type CourseListResult struct {
+	Ok    bool              `json:"ok"`
+	Data  []service.CourseVO `json:"data"`
+	Error string            `json:"error,omitempty"`
+}
+
+func (a *App) GetCourses(uid string) CourseListResult {
+	data, err := service.GetCourses(uid)
+	if err != nil {
+		return CourseListResult{Error: err.Error()}
+	}
+	return CourseListResult{Ok: true, Data: data}
+}
+
 func (a *App) CheckForUpdates(currentVersion string) UpdateResult {
 	latest, url, err := fetchLatestGitHubVersion()
 	if err != nil {
