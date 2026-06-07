@@ -5,6 +5,8 @@ import {main} from '../models';
 
 export function AddAccount(arg1:service.AccountReq):Promise<main.BoolResult>;
 
+export function CheckForUpdates(arg1:string):Promise<main.UpdateResult>;
+
 export function DeleteAccount(arg1:string):Promise<main.BoolResult>;
 
 export function ExportConfig(arg1:service.AppConfig):Promise<main.BoolResult>;

@@ -2,7 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"os/exec"
+	"strings"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"yatori-go-desktop/service"
@@ -22,15 +27,15 @@ type StringResult struct {
 }
 
 type ConfigResult struct {
-	Ok    bool           `json:"ok"`
+	Ok    bool              `json:"ok"`
 	Data  service.AppConfig `json:"data"`
-	Error string         `json:"error,omitempty"`
+	Error string            `json:"error,omitempty"`
 }
 
 type AccountListResult struct {
-	Ok    bool               `json:"ok"`
+	Ok    bool                `json:"ok"`
 	Data  []service.AccountVO `json:"data"`
-	Error string             `json:"error,omitempty"`
+	Error string              `json:"error,omitempty"`
 }
 
 type TaskStatusListResult struct {
@@ -55,6 +60,19 @@ type PlatformListResult struct {
 	Ok    bool                   `json:"ok"`
 	Data  []service.PlatformInfo `json:"data"`
 	Error string                 `json:"error,omitempty"`
+}
+
+type UpdateInfo struct {
+	HasUpdate      bool   `json:"hasUpdate"`
+	LatestVersion  string `json:"latestVersion"`
+	CurrentVersion string `json:"currentVersion"`
+	URL            string `json:"url"`
+}
+
+type UpdateResult struct {
+	Ok    bool       `json:"ok"`
+	Data  UpdateInfo `json:"data"`
+	Error string     `json:"error,omitempty"`
 }
 
 // --- App ---
@@ -278,4 +296,95 @@ func (a *App) OpenURL(url string) BoolResult {
 	}
 	runtime.BrowserOpenURL(a.ctx, url)
 	return BoolResult{Ok: true}
+}
+
+func (a *App) CheckForUpdates(currentVersion string) UpdateResult {
+	latest, url, err := fetchLatestGitHubVersion()
+	if err != nil {
+		return UpdateResult{Error: err.Error()}
+	}
+	current := normalizeVersion(currentVersion)
+	latestNorm := normalizeVersion(latest)
+	return UpdateResult{Ok: true, Data: UpdateInfo{
+		HasUpdate:      compareVersions(latestNorm, current) > 0,
+		LatestVersion:  latestNorm,
+		CurrentVersion: current,
+		URL:            url,
+	}}
+}
+
+func fetchLatestGitHubVersion() (string, string, error) {
+	client := &http.Client{Timeout: 12 * time.Second}
+	var release struct {
+		TagName string `json:"tag_name"`
+		HTMLURL string `json:"html_url"`
+	}
+	status, err := getJSON(client, "https://api.github.com/repos/yuanglove/yatori-go-desktop/releases/latest", &release)
+	if err == nil && release.TagName != "" {
+		if release.HTMLURL == "" {
+			release.HTMLURL = "https://github.com/yuanglove/yatori-go-desktop/releases"
+		}
+		return release.TagName, release.HTMLURL, nil
+	}
+	if err != nil && status != http.StatusNotFound {
+		return "", "", err
+	}
+
+	var tags []struct {
+		Name string `json:"name"`
+	}
+	_, err = getJSON(client, "https://api.github.com/repos/yuanglove/yatori-go-desktop/tags", &tags)
+	if err != nil {
+		return "", "", err
+	}
+	if len(tags) == 0 || tags[0].Name == "" {
+		return "", "", fmt.Errorf("GitHub 暂无可用版本标签")
+	}
+	return tags[0].Name, "https://github.com/yuanglove/yatori-go-desktop/releases", nil
+}
+
+func getJSON(client *http.Client, url string, out any) (int, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("User-Agent", "yatori-go-desktop")
+	req.Header.Set("Accept", "application/vnd.github+json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("无法连接 GitHub：%w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return resp.StatusCode, fmt.Errorf("GitHub API 返回 %d", resp.StatusCode)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		return resp.StatusCode, fmt.Errorf("解析 GitHub 响应失败：%w", err)
+	}
+	return resp.StatusCode, nil
+}
+
+func normalizeVersion(v string) string {
+	return strings.TrimPrefix(strings.TrimSpace(strings.ToLower(v)), "v")
+}
+
+func compareVersions(a, b string) int {
+	ap := strings.Split(a, ".")
+	bp := strings.Split(b, ".")
+	for i := 0; i < len(ap) || i < len(bp); i++ {
+		av, bv := 0, 0
+		if i < len(ap) {
+			_, _ = fmt.Sscanf(ap[i], "%d", &av)
+		}
+		if i < len(bp) {
+			_, _ = fmt.Sscanf(bp[i], "%d", &bv)
+		}
+		if av > bv {
+			return 1
+		}
+		if av < bv {
+			return -1
+		}
+	}
+	return 0
 }
