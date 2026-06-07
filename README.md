@@ -1,4 +1,4 @@
-# Yatori Go Desktop
+# Yatori Go Desktop   超星泛雅超星学习通小助手/windos桌面工具
 
 Yatori Go Desktop 是基于 [yatori-dev/yatori-go-console](https://github.com/yatori-dev/yatori-go-console) 改造的 Windows 桌面版工具。
 
@@ -37,7 +37,7 @@ Yatori Go Desktop 是基于 [yatori-dev/yatori-go-console](https://github.com/ya
 | 其他平台 GUI 控制 | ⚠️ 仅配置 | 用 `-cli` 运行 |
 | 学习通 CxNode 并发数 | ✅ 支持 | 账号编辑页可配置 |
 | 章节测试 AI 答题 | ✅ 支持 | 需配置 API Key |
-| 验证码 / 人脸识别绕过 | ❌ 不支持 | 不提供此能力 |
+| 验证码 / 人脸识别绕过 | 没有测试 |           |
 
 ---
 
