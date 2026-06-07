@@ -53,6 +53,7 @@ func getWeLearnCourses(po AccountPO) ([]CourseVO, error) {
 			JobFinishCount: finCount,
 			JobCount:       totalCount,
 			JobRate:        jobRate,
+			HasProgress:    totalCount > 0,
 			IsStart:        true,
 		})
 	}
