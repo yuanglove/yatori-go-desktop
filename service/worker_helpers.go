@@ -70,8 +70,5 @@ func buildActivity(po AccountPO) consoleActivity.Activity {
 		Uid: po.UID, AccountType: po.AccountType, Url: po.URL,
 		Account: po.Account, Password: pwd, UserConfigJson: string(userJSON),
 	}
-	if po.AccountType == "XUEXITONG" {
-		return consoleActivity.BuildUserActivity(consolePO)
-	}
-	return nil
+	return consoleActivity.BuildUserActivity(consolePO)
 }

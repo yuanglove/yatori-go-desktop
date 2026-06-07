@@ -255,6 +255,7 @@ func (m *TaskManager) setLog(uid, msg string) {
 	e.mu.Unlock()
 }
 
+func DecodePassword(enc string) string { return decodePassword(enc) }
 func decodePassword(enc string) string {
 	const prefix = "b64:"
 	if len(enc) <= len(prefix) {

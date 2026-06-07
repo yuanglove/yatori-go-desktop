@@ -3,7 +3,7 @@ import { EventsOn } from '../../wailsjs/runtime/runtime'
 
 export interface AppConfig {
   setting: {
-    basicSetting:  { completionTone:number; colorLog:number; logOutFileSw:number; logLevel:string; logModel:number; webModel:number }
+    basicSetting:  { completionTone:number; colorLog:number; logOutFileSw:number; logLevel:string; logModel:number; webModel:number; theme?:string }
     emailInform:   { sw:number; smtpHost:string; smtpPort:number; userName:string; password:string }
     aiSetting:     { aiType:string; aiUrl:string; model:string; apiKey:string }
     apiQueSetting: { url:string }

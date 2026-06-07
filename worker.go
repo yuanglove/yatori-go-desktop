@@ -7,7 +7,9 @@ import (
 	"time"
 
 	consoleConfig "yatori-go-console/config"
+	"github.com/yatori-dev/yatori-go-core/aggregation/yinghua"
 	xuexitongApiPkg "github.com/yatori-dev/yatori-go-core/api/xuexitong"
+	yinghuaApiPkg "github.com/yatori-dev/yatori-go-core/api/yinghua"
 	ctype "github.com/yatori-dev/yatori-go-core/models/ctype"
 	"yatori-go-desktop/service"
 )
@@ -75,37 +77,6 @@ func runWorker(uid string) int {
 
 	user := service.BuildUserFromPO(po)
 
-	act := service.BuildActivity(po)
-	if act == nil {
-		p("平台 %s 暂不支持 worker 模式", po.AccountType)
-		return 1
-	}
-
-	p("正在登录 %s...", po.Account)
-	if err := act.Login(); err != nil {
-		p("登录失败: %s", err)
-		return 1
-	}
-
-	cache := act.GetUserCache()
-	if cache == nil {
-		p("登录后 cache 为空")
-		return 1
-	}
-	xxtCache, ok := cache.(*xuexitongApiPkg.XueXiTUserCache)
-	if !ok {
-		p("cache 类型断言失败，非 XUEXITONG")
-		return 1
-	}
-
-	p("登录成功，开始学习任务")
-
-	submitThreshold := 100
-	var cc service.CoursesCustom
-	if json.Unmarshal([]byte(po.CoursesCustom), &cc) == nil && cc.SubmitThresholdPercent > 0 {
-		submitThreshold = cc.SubmitThresholdPercent
-	}
-
 	emit := func(format string, args ...interface{}) {
 		if len(args) > 0 {
 			fmt.Println(fmt.Sprintf(format, args...))
@@ -114,11 +85,75 @@ func runWorker(uid string) int {
 		}
 	}
 
-	if err := service.SafeRun(context.Background(), setting, &user, xxtCache, submitThreshold, emit); err != nil {
-		p("任务失败: %s", err)
+	p("正在登录 %s (%s)...", po.Account, po.AccountType)
+
+	var runErr error
+	switch po.AccountType {
+	case "XUEXITONG":
+		act := service.BuildActivity(po)
+		if act == nil {
+			p("构建学习通 Activity 失败")
+			return 1
+		}
+		if err := act.Login(); err != nil {
+			p("登录失败: %s", err)
+			return 1
+		}
+		cache := act.GetUserCache()
+		if cache == nil {
+			p("登录后 cache 为空")
+			return 1
+		}
+		xxtCache, ok := cache.(*xuexitongApiPkg.XueXiTUserCache)
+		if !ok {
+			p("cache 类型断言失败，非 XUEXITONG")
+			return 1
+		}
+		submitThreshold := 100
+		var cc service.CoursesCustom
+		if json.Unmarshal([]byte(po.CoursesCustom), &cc) == nil && cc.SubmitThresholdPercent > 0 {
+			submitThreshold = cc.SubmitThresholdPercent
+		}
+		p("登录成功，开始学习任务")
+		runErr = service.SafeRun(context.Background(), setting, &user, xxtCache, submitThreshold, emit)
+
+	case "YINGHUA":
+		yhCache := &yinghuaApiPkg.YingHuaUserCache{
+			PreUrl:   po.URL,
+			Account:  po.Account,
+			Password: service.DecodePassword(po.PasswordEnc),
+		}
+		if err := yinghua.YingHuaLoginAction(yhCache); err != nil {
+			p("英华登录失败: %s", err)
+			return 1
+		}
+		p("英华登录成功，开始学习任务")
+		runErr = service.SafeYingHuaRun(context.Background(), setting, &user, yhCache, emit)
+
+	case "ENAEA":
+		service.RunEnaea(setting, user, emit)
+	case "QSXT":
+		service.RunQsxt(setting, user, emit)
+	case "CQIE":
+		service.RunCqie(setting, user, emit)
+	case "WELEARN":
+		service.RunWeLearn(setting, user, emit)
+	case "ICVE":
+		service.RunIcve(setting, user, emit)
+	case "HQKJ":
+		service.RunHqkj(setting, user, emit)
+	case "KETANGX":
+		service.RunKetangx(setting, user, emit)
+
+	default:
+		p("平台 %s 暂不支持 worker 模式", po.AccountType)
 		return 1
 	}
 
+	if runErr != nil {
+		p("任务失败: %s", runErr)
+		return 1
+	}
 	p("任务完成")
 	return 0
 }

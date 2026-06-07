@@ -126,28 +126,29 @@ func NormalizeLogText(s string) string {
 	return strings.ToValidUTF8(s, "?")
 }
 
-// fixMojibake 把每个 rune 的 codepoint 当 Latin-1 字节，重新 UTF-8 decode
-// 只在至少一个 rune 的 codepoint 在 0x80-0xFF（Latin-1 扩展区）且结果合法 UTF-8 时才应用
+// fixMojibake 把每个 rune 的 codepoint 当 Latin-1 字节，尝试还原中文。
+// 覆盖两种情况：
+//  1. GBK bytes 被 Latin-1 误读后存成 UTF-8（codepoints 均 ≤0xFF，还原字节后可 GBK decode）
+//  2. GBK bytes 被 Latin-1 误读后存成 UTF-8，还原字节后直接是合法 UTF-8
 func fixMojibake(s string) string {
 	runes := []rune(s)
-	bytes := make([]byte, 0, len(runes))
-	allLatin1 := true
+	raw := make([]byte, 0, len(runes))
 	for _, r := range runes {
 		if r > 0xFF {
-			allLatin1 = false
-			break
+			return s // 含非 Latin-1 字符，不是 mojibake
 		}
-		bytes = append(bytes, byte(r))
+		raw = append(raw, byte(r))
 	}
-	if !allLatin1 {
-		return s
-	}
-	if utf8.Valid(bytes) {
-		result := string(bytes)
-		// 只在结果含有中文时才替换（避免误转纯 ASCII）
-		if hasCJK(result) {
+	// 情况1：还原字节后是合法 UTF-8 且含 CJK
+	if utf8.Valid(raw) {
+		if result := string(raw); hasCJK(result) {
 			return result
 		}
+	}
+	// 情况2：还原字节后是 GBK，尝试 GBK decode
+	out, _, err := transform.String(simplifiedchinese.GBK.NewDecoder(), string(raw))
+	if err == nil && utf8.ValidString(out) && hasCJK(out) {
+		return out
 	}
 	return s
 }

@@ -29,6 +29,7 @@ type BasicSetting struct {
 	LogLevel       string `yaml:"logLevel" json:"logLevel"`
 	LogModel       int    `yaml:"logModel" json:"logModel"`
 	WebModel       int    `yaml:"webModel" json:"webModel"`
+	Theme          string `yaml:"theme,omitempty" json:"theme,omitempty"`
 }
 
 type EmailInform struct {
