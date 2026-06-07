@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os/exec"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"yatori-go-desktop/service"
@@ -131,7 +132,9 @@ func (a *App) OpenDataDir() BoolResult {
 	if err != nil {
 		return BoolResult{Error: err.Error()}
 	}
-	runtime.BrowserOpenURL(a.ctx, "file://"+dir)
+	if err := exec.Command("explorer.exe", dir).Start(); err != nil {
+		return BoolResult{Error: err.Error()}
+	}
 	return BoolResult{Ok: true}
 }
 
