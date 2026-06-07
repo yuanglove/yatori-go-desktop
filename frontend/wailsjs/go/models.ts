@@ -539,6 +539,7 @@ export namespace service {
 	    logModel: number;
 	    webModel: number;
 	    theme?: string;
+	    maxWorkers?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new BasicSetting(source);
@@ -553,6 +554,7 @@ export namespace service {
 	        this.logModel = source["logModel"];
 	        this.webModel = source["webModel"];
 	        this.theme = source["theme"];
+	        this.maxWorkers = source["maxWorkers"];
 	    }
 	}
 	export class Setting {

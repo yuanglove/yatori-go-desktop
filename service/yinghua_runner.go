@@ -38,6 +38,17 @@ func SafeYingHuaRun(ctx context.Context, setting consoleConfig.Setting,
 	}
 	log("", "", fmt.Sprintf("已拉取课程总数：%d", len(courseList)))
 
+	// 课程级并发限制：从 CxNode 读取，clamp 到 1-8，默认 1
+	concurrency := 1
+	if user.CoursesCustom.CxNode != nil && *user.CoursesCustom.CxNode > 0 {
+		concurrency = *user.CoursesCustom.CxNode
+	}
+	if concurrency > 8 {
+		concurrency = 8
+	}
+	log("", "", fmt.Sprintf("【并发配置】实际并发数=%d videoModel=%d", concurrency, user.CoursesCustom.VideoModel))
+
+	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
 	for i := range courseList {
 		if ctx.Err() != nil {
@@ -61,9 +72,11 @@ func SafeYingHuaRun(ctx context.Context, setting consoleConfig.Setting,
 		}
 
 		if user.CoursesCustom.VideoModel == 2 {
+			sem <- struct{}{}
 			wg.Add(1)
 			go func(c yinghua.YingHuaCourse) {
 				defer wg.Done()
+				defer func() { <-sem }()
 				yinghuaRunCourse(ctx, setting, user, cache, &c, log)
 			}(course)
 		} else {

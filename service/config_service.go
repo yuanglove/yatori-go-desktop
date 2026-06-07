@@ -30,6 +30,7 @@ type BasicSetting struct {
 	LogModel       int    `yaml:"logModel" json:"logModel"`
 	WebModel       int    `yaml:"webModel" json:"webModel"`
 	Theme          string `yaml:"theme,omitempty" json:"theme,omitempty"`
+	MaxWorkers     int    `yaml:"maxWorkers,omitempty" json:"maxWorkers,omitempty"`
 }
 
 type EmailInform struct {
@@ -63,19 +64,19 @@ type User struct {
 }
 
 type CoursesCustom struct {
-	StudyTime       string           `yaml:"studyTime,omitempty" json:"studyTime,omitempty"`
-	CxNode          *int             `yaml:"cxNode,omitempty" json:"cxNode,omitempty"`
-	CxChapterTestSw *int             `yaml:"cxChapterTestSw,omitempty" json:"cxChapterTestSw,omitempty"`
-	CxWorkSw        *int             `yaml:"cxWorkSw,omitempty" json:"cxWorkSw,omitempty"`
-	CxExamSw        *int             `yaml:"cxExamSw,omitempty" json:"cxExamSw,omitempty"`
-	ShuffleSw       int              `yaml:"shuffleSw" json:"shuffleSw"`
-	VideoModel      int              `yaml:"videoModel" json:"videoModel"`
-	AutoExam        int              `yaml:"autoExam" json:"autoExam"`
-	ExamAutoSubmit           int    `yaml:"examAutoSubmit" json:"examAutoSubmit"`
-	SubmitThresholdPercent   int    `yaml:"submitThresholdPercent,omitempty" json:"submitThresholdPercent,omitempty"`
-	ExcludeCourses  []string         `yaml:"excludeCourses" json:"excludeCourses"`
-	IncludeCourses  []string         `yaml:"includeCourses" json:"includeCourses"`
-	CoursesSettings []CourseSettings `yaml:"coursesSettings,omitempty" json:"coursesSettings,omitempty"`
+	StudyTime              string           `yaml:"studyTime,omitempty" json:"studyTime,omitempty"`
+	CxNode                 *int             `yaml:"cxNode,omitempty" json:"cxNode,omitempty"`
+	CxChapterTestSw        *int             `yaml:"cxChapterTestSw,omitempty" json:"cxChapterTestSw,omitempty"`
+	CxWorkSw               *int             `yaml:"cxWorkSw,omitempty" json:"cxWorkSw,omitempty"`
+	CxExamSw               *int             `yaml:"cxExamSw,omitempty" json:"cxExamSw,omitempty"`
+	ShuffleSw              int              `yaml:"shuffleSw" json:"shuffleSw"`
+	VideoModel             int              `yaml:"videoModel" json:"videoModel"`
+	AutoExam               int              `yaml:"autoExam" json:"autoExam"`
+	ExamAutoSubmit         int              `yaml:"examAutoSubmit" json:"examAutoSubmit"`
+	SubmitThresholdPercent int              `yaml:"submitThresholdPercent,omitempty" json:"submitThresholdPercent,omitempty"`
+	ExcludeCourses         []string         `yaml:"excludeCourses" json:"excludeCourses"`
+	IncludeCourses         []string         `yaml:"includeCourses" json:"includeCourses"`
+	CoursesSettings        []CourseSettings `yaml:"coursesSettings,omitempty" json:"coursesSettings,omitempty"`
 }
 
 type CourseSettings struct {
@@ -132,6 +133,10 @@ func ValidateConfig(cfg AppConfig) []string {
 			errs = append(errs, fmt.Sprintf("第 %d 个账号的 accountType 不能为空", i+1))
 		}
 	}
+	mw := cfg.Setting.BasicSetting.MaxWorkers
+	if mw != 0 && (mw < 1 || mw > 10) {
+		errs = append(errs, "maxWorkers 必须在 1-10 之间")
+	}
 	return errs
 }
 
@@ -144,7 +149,8 @@ func defaultConfig() AppConfig {
 				LogOutFileSw:   1,
 				LogLevel:       "INFO",
 				LogModel:       0,
-				WebModel:       0, // 桌面模式不启动 Gin
+				WebModel:       0,
+				MaxWorkers:     3,
 			},
 			ApiQueSetting: ApiQueSetting{Url: "http://localhost:8083"},
 			AiSetting:     AiSetting{AiType: "TONGYI"},
@@ -158,6 +164,9 @@ func applyDefaults(cfg *AppConfig) {
 	}
 	if cfg.Setting.ApiQueSetting.Url == "" {
 		cfg.Setting.ApiQueSetting.Url = "http://localhost:8083"
+	}
+	if cfg.Setting.BasicSetting.MaxWorkers <= 0 {
+		cfg.Setting.BasicSetting.MaxWorkers = 3
 	}
 	one := 1
 	three := 3

@@ -12,7 +12,6 @@ import (
 	"time"
 )
 
-// sysLog 生成带时间戳的系统日志行
 func sysLog(format string, args ...interface{}) string {
 	return fmt.Sprintf("[%s] [系统] %s",
 		time.Now().Format("2006-01-02 15:04:05"),
@@ -48,17 +47,42 @@ type taskEntry struct {
 type LogEmitter func(uid, msg string)
 
 type TaskManager struct {
-	mu      sync.RWMutex
-	tasks   map[string]*taskEntry
-	emitter LogEmitter
+	mu         sync.RWMutex
+	tasks      map[string]*taskEntry
+	emitter    LogEmitter
+	maxWorkers int
 }
 
 func NewTaskManager(emitter LogEmitter) *TaskManager {
-	return &TaskManager{tasks: make(map[string]*taskEntry), emitter: emitter}
+	return &TaskManager{tasks: make(map[string]*taskEntry), emitter: emitter, maxWorkers: 3}
 }
 
-// SetConfigPath 保留接口兼容（worker 子进程自己读配置，此字段不再使用）
 func (m *TaskManager) SetConfigPath(_ string) {}
+
+// SetMaxWorkers 更新全局并发上限（1-10），app.go 在 startup/SaveConfig 后调用
+func (m *TaskManager) SetMaxWorkers(n int) {
+	if n < 1 {
+		n = 1
+	}
+	if n > 10 {
+		n = 10
+	}
+	m.mu.Lock()
+	m.maxWorkers = n
+	m.mu.Unlock()
+}
+
+func (m *TaskManager) runningCount() int {
+	count := 0
+	for _, e := range m.tasks {
+		e.mu.Lock()
+		if e.status.State == StateRunning {
+			count++
+		}
+		e.mu.Unlock()
+	}
+	return count
+}
 
 func (m *TaskManager) Start(uid string) error {
 	po, err := getAccountPO(uid)
@@ -76,6 +100,11 @@ func (m *TaskManager) Start(uid string) error {
 		if state == StateRunning {
 			return fmt.Errorf("账号 %s 已在运行中", uid)
 		}
+	}
+
+	running := m.runningCount()
+	if running >= m.maxWorkers {
+		return fmt.Errorf("当前运行任务数已达上限：%d", m.maxWorkers)
 	}
 
 	exe, err := os.Executable()
@@ -109,6 +138,11 @@ func (m *TaskManager) Start(uid string) error {
 	}
 	m.tasks[uid] = e
 
+	if m.emitter != nil {
+		m.emitter(uid, sysLog("worker 并发：当前 %d/%d", running+1, m.maxWorkers))
+		m.emitter(uid, sysLog("worker 子进程已启动 pid=%d", cmd.Process.Pid))
+	}
+
 	go m.pipeLog(uid, e, stdout)
 	go func() {
 		_ = cmd.Wait()
@@ -124,9 +158,6 @@ func (m *TaskManager) Start(uid string) error {
 		}
 	}()
 
-	if m.emitter != nil {
-		m.emitter(uid, sysLog("worker 子进程已启动 pid=%d", cmd.Process.Pid))
-	}
 	return nil
 }
 
@@ -150,14 +181,12 @@ func (m *TaskManager) Stop(uid string) {
 	}
 	e.mu.Unlock()
 
-	// 关闭日志转发 goroutine
 	select {
 	case <-e.logDone:
 	default:
 		close(e.logDone)
 	}
 
-	// 用 taskkill 杀整个进程树
 	if pid > 0 {
 		if out, err := exec.Command("taskkill", "/PID", strconv.Itoa(pid), "/T", "/F").CombinedOutput(); err != nil {
 			if m.emitter != nil {
@@ -167,7 +196,6 @@ func (m *TaskManager) Stop(uid string) {
 		if e.cmd.Process != nil {
 			_ = e.cmd.Process.Kill()
 		}
-		// 注意：不在此处调用 cmd.Wait()，Start 的 goroutine 负责 Wait
 	}
 
 	e.mu.Lock()
@@ -191,14 +219,11 @@ func (m *TaskManager) StopAll() {
 	}
 }
 
-// pipeLog 从 worker stdout 逐行读取并转发，stopped 后丢弃残余日志
 func (m *TaskManager) pipeLog(uid string, e *taskEntry, r io.Reader) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
-		// 检查是否已停止
 		select {
 		case <-e.logDone:
-			// 排空 pipe 但不 emit
 			for scanner.Scan() {}
 			return
 		default:
@@ -210,7 +235,6 @@ func (m *TaskManager) pipeLog(uid string, e *taskEntry, r io.Reader) {
 			for scanner.Scan() {}
 			return
 		}
-
 		line := NormalizeLogText(scanner.Text())
 		if m.emitter != nil {
 			m.emitter(uid, line)

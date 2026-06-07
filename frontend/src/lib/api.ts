@@ -3,7 +3,7 @@ import { EventsOn } from '../../wailsjs/runtime/runtime'
 
 export interface AppConfig {
   setting: {
-    basicSetting:  { completionTone:number; colorLog:number; logOutFileSw:number; logLevel:string; logModel:number; webModel:number; theme?:string }
+    basicSetting:  { completionTone:number; colorLog:number; logOutFileSw:number; logLevel:string; logModel:number; webModel:number; theme?:string; maxWorkers?:number }
     emailInform:   { sw:number; smtpHost:string; smtpPort:number; userName:string; password:string }
     aiSetting:     { aiType:string; aiUrl:string; model:string; apiKey:string }
     apiQueSetting: { url:string }
@@ -66,6 +66,7 @@ export const api = {
   getPlatformSupport:():               Promise<PlatformListResult>    => c(App.GetPlatformSupport()),
   testAIConfig:      ():               Promise<StringResult>          => c(App.TestAIConfig()),
   checkForUpdates:   (current: string): Promise<UpdateResult>          => c(App.CheckForUpdates(current)),
+  openURL:           (url: string):    Promise<BoolResult>            => c(App.OpenURL(url)),
 }
 
 export function onTaskLog(uid: string, cb: (msg: string) => void): () => void {

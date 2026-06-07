@@ -106,6 +106,7 @@ func (a *App) startup(ctx context.Context) {
 		// 首次启动：确保 config.yaml 存在（LoadConfig 返回默认配置时写入磁盘）
 		if cfg, e := service.LoadConfig(path); e == nil {
 			_ = service.SaveConfig(path, cfg)
+			a.taskMgr.SetMaxWorkers(cfg.Setting.BasicSetting.MaxWorkers)
 		}
 	}
 	// 初始化数据库（失败时只记录，不阻止启动）
@@ -134,6 +135,7 @@ func (a *App) SaveConfig(cfg service.AppConfig) BoolResult {
 	if err := service.SaveConfig(a.configPath, cfg); err != nil {
 		return BoolResult{Error: err.Error()}
 	}
+	a.taskMgr.SetMaxWorkers(cfg.Setting.BasicSetting.MaxWorkers)
 	return BoolResult{Ok: true}
 }
 
