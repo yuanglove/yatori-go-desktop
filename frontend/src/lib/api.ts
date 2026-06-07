@@ -32,6 +32,7 @@ export interface TaskStatus {
 }
 export interface Dashboard { totalAccounts:number; runningTasks:number; configPath:string; configOK:boolean; recentLogs:string[] }
 export interface PlatformInfo { code:string; name:string; guiSupport:string; note:string }
+export interface UpdateInfo { hasUpdate:boolean; latestVersion:string; currentVersion:string; url:string }
 
 export interface BoolResult          { ok:boolean; error?:string }
 export interface StringResult        { ok:boolean; data:string;          error?:string }
@@ -41,6 +42,7 @@ export interface TaskStatusListResult{ ok:boolean; data:TaskStatus[];    error?:
 export interface DashboardResult     { ok:boolean; data:Dashboard;       error?:string }
 export interface StringListResult    { ok:boolean; data:string[];        error?:string }
 export interface PlatformListResult  { ok:boolean; data:PlatformInfo[];  error?:string }
+export interface UpdateResult        { ok:boolean; data:UpdateInfo;      error?:string }
 
 const c = <T>(p: Promise<unknown>): Promise<T> => p as Promise<T>
 
@@ -63,6 +65,7 @@ export const api = {
   getRecentLogs:     (n: number):      Promise<StringListResult>      => c(App.GetRecentLogs(n)),
   getPlatformSupport:():               Promise<PlatformListResult>    => c(App.GetPlatformSupport()),
   testAIConfig:      ():               Promise<StringResult>          => c(App.TestAIConfig()),
+  checkForUpdates:   (current: string): Promise<UpdateResult>          => c(App.CheckForUpdates(current)),
 }
 
 export function onTaskLog(uid: string, cb: (msg: string) => void): () => void {

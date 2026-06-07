@@ -6,6 +6,10 @@ export function AddAccount(arg1) {
   return window['go']['main']['App']['AddAccount'](arg1);
 }
 
+export function CheckForUpdates(arg1) {
+  return window['go']['main']['App']['CheckForUpdates'](arg1);
+}
+
 export function DeleteAccount(arg1) {
   return window['go']['main']['App']['DeleteAccount'](arg1);
 }
