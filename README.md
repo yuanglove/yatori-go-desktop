@@ -2,7 +2,7 @@
 
 Yatori Go Desktop 是基于 [yatori-dev/yatori-go-console](https://github.com/yatori-dev/yatori-go-console) 改造的 Windows 桌面版工具。
 
-原项目提供命令行和网页模式的学习任务执行能力。本项目在其基础上增加了 Wails 桌面 GUI、账号管理、任务控制、日志中心、全局设置、主题切换和关于本项目页面，使主要操作可以通过窗口完成。
+原项目提供命令行和网页模式的学习任务执行能力。本项目在其基础上增加了 Wails 桌面 GUI、账号管理、任务控制、日志中心、全局设置、主题切换、关于本项目页面和版本检测能力，使主要操作可以通过窗口完成。
 
 > 本项目由 [yatori-dev/yatori-go-console](https://github.com/yatori-dev/yatori-go-console) 改造而来。感谢原项目作者和相关开源依赖。
 
@@ -18,9 +18,75 @@ v0.2.0
 - 通过 worker 子进程执行任务，任务停止采用硬停止方式。
 - 支持学习通、英华学堂及更多原项目平台的桌面任务入口。
 - 支持学习通章节测验 AI / 题库答题配置。
-- 支持多套主题，并在全局设置中持久化保存。
+- 支持 9 套主题，并在全局设置中持久化保存。
+- 增加 GitHub 自动检测新版本和手动检测入口。
 - 统一日志展示，并优化 Windows 中文乱码处理。
 - 配置、数据库和日志统一保存到 `%APPDATA%\yatori-go-console`。
+
+## 本项目架构
+
+```text
+yatori-go-desktop/
+├── main.go                         Wails 入口，支持普通桌面模式与 --worker 子进程模式
+├── app.go                          Wails 绑定层，暴露给前端调用的 Go 方法
+├── worker.go                       任务 worker 入口，按平台分发执行逻辑
+├── worker_utf8_windows.go          Windows worker 输出编码处理
+├── service/
+│   ├── account_service.go          账号 CRUD、仪表盘数据
+│   ├── config_service.go           config.yaml 读写、默认值、校验
+│   ├── log_service.go              日志缓冲、文件 tail、乱码修复
+│   ├── task_manager.go             任务生命周期、worker 子进程启动与硬停止
+│   ├── platform.go                 平台支持状态表
+│   ├── worker_helpers.go           worker 构建用户和平台对象的辅助方法
+│   ├── xxt_runner.go               学习通安全 runner
+│   ├── yinghua_runner.go           英华学堂 runner
+│   └── other_runners.go            其他平台 worker 入口
+├── frontend/
+│   ├── src/components/Layout.tsx    主布局、导航、启动时主题和版本检测
+│   ├── src/pages/                  仪表盘、账号、任务、日志、设置、关于页面
+│   ├── src/lib/api.ts              前端调用 Wails Go 方法的封装
+│   ├── src/lib/theme.ts            主题列表与主题应用
+│   ├── src/lib/update.ts           GitHub 版本检测
+│   └── src/lib/version.ts          当前版本和仓库地址常量
+└── wails.json                      Wails 项目配置和 exe 元信息
+```
+
+运行流程：
+
+```text
+React 前端页面
+  ↓ Wails binding
+app.go
+  ↓
+service.TaskManager
+  ↓ 启动独立 worker 子进程
+worker.go
+  ↓ 按账号平台分发
+service/*_runner.go
+  ↓ 复用原项目逻辑
+yatori-go-console/logic/{platform}
+```
+
+任务停止流程：
+
+```text
+前端点击停止
+  ↓
+TaskManager.Stop(uid)
+  ↓
+taskkill /T /F 结束 worker 子进程树
+  ↓
+主窗口保持运行
+```
+
+数据路径：
+
+```text
+%APPDATA%\yatori-go-console\
+├── config.yaml
+├── yatori.db
+└── assets\log\
+```
 
 ## 功能状态
 
@@ -32,6 +98,7 @@ v0.2.0
 | 日志中心 | 支持 | 历史日志 + 实时日志 |
 | 全局设置 | 支持 | AI、题库、邮件、日志、主题 |
 | 主题切换 | 支持 | 9 套主题，保存到 config.yaml |
+| 版本检测 | 支持 | 自动从 GitHub Releases/Tags 检测新版本 |
 | 学习通 | 支持 | 已做较完整桌面适配 |
 | 英华学堂 | 支持 | worker 子进程入口 |
 | 其他平台 | 支持入口 | 复用原项目 logic，具体效果需按账号实测 |
@@ -77,15 +144,6 @@ go vet ./...
 go test ./service/... -v
 cd frontend && npm install && npm run build && cd ..
 wails build -platform windows/amd64 -o yatori-go-desktop.exe
-```
-
-## 数据目录
-
-```text
-%APPDATA%\yatori-go-console\
-├── config.yaml
-├── yatori.db
-└── assets\log\
 ```
 
 ## 已知限制
