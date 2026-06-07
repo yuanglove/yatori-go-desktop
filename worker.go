@@ -22,6 +22,16 @@ func workerLog(format string, args ...interface{}) string {
 		fmt.Sprintf(format, args...))
 }
 
+// needsCoreRuntime 判断平台是否需要初始化 ONNX Runtime（OCR）
+func needsCoreRuntime(platform string) bool {
+	switch platform {
+	case "YINGHUA", "XUEXITONG", "CQIE", "QSXT", "ICVE":
+		return true
+	default:
+		return false
+	}
+}
+
 func runWorker(uid string) int {
 	p := func(format string, args ...interface{}) {
 		fmt.Println(workerLog(format, args...))
@@ -94,6 +104,15 @@ func runWorker(uid string) int {
 		}
 	}
 
+	// 按平台决定是否初始化 ONNX Runtime
+	if needsCoreRuntime(po.AccountType) {
+		p("初始化 Core Runtime...")
+		coreUtils.YatoriCoreInit()
+		p("Core Runtime 初始化完成")
+	} else {
+		p("跳过 Core Runtime 初始化：当前平台无需 OCR")
+	}
+
 	p("正在登录 %s (%s)...", po.Account, po.AccountType)
 
 	var runErr error
@@ -127,11 +146,6 @@ func runWorker(uid string) int {
 		runErr = service.SafeRun(context.Background(), setting, &user, xxtCache, submitThreshold, emit)
 
 	case "YINGHUA":
-		// 英华登录验证码会触发 OCR，必须在 worker 子进程内初始化。
-		p("初始化 Core Runtime...")
-		coreUtils.YatoriCoreInit()
-		p("Core Runtime 初始化完成")
-
 		p("英华参数: URL=%q Account=%q PasswordEnc空=%v 密码长度=%d",
 			po.URL, po.Account, po.PasswordEnc == "", len(service.DecodePassword(po.PasswordEnc)))
 		if po.URL == "" {

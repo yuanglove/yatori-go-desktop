@@ -13,6 +13,8 @@ export function ExportConfig(arg1:service.AppConfig):Promise<main.BoolResult>;
 
 export function GetConfig():Promise<main.ConfigResult>;
 
+export function GetCourses(arg1:string):Promise<main.CourseListResult>;
+
 export function GetDashboard():Promise<main.DashboardResult>;
 
 export function GetDataDir():Promise<main.StringResult>;
