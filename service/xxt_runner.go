@@ -16,16 +16,16 @@ import (
 	"sync"
 	"time"
 
-	consoleConfig "yatori-go-console/config"
-	xxtLogic "yatori-go-console/logic/xuexitong"
+	"encoding/json"
+	"github.com/thedevsaddam/gojsonq"
 	xuexitong "github.com/yatori-dev/yatori-go-core/aggregation/xuexitong"
 	xuexitongApi "github.com/yatori-dev/yatori-go-core/api/xuexitong"
 	aiq "github.com/yatori-dev/yatori-go-core/que-core/aiq"
 	external "github.com/yatori-dev/yatori-go-core/que-core/external"
-	"encoding/json"
 	"io"
 	"net/http"
-	"github.com/thedevsaddam/gojsonq"
+	consoleConfig "yatori-go-console/config"
+	xxtLogic "yatori-go-console/logic/xuexitong"
 )
 
 // emit 是日志回调，用 printf 格式
@@ -50,7 +50,7 @@ func formatXXTLog(platform, account, course, taskPoint, item, message string) st
 // formatTaskPoint 将 KnowledgeItem 的 Label+Name 组合为任务点标签
 func formatTaskPoint(k xuexitong.KnowledgeItem) string {
 	label := strings.TrimSpace(k.Label)
-	name  := strings.TrimSpace(k.Name)
+	name := strings.TrimSpace(k.Name)
 	if label != "" && name != "" {
 		return label + " " + name
 	}
@@ -424,7 +424,7 @@ func safeRunNode(ctx context.Context, setting consoleConfig.Setting,
 				xlog(tp, qa.Title, "章节测验已完成，跳过")
 				continue
 			}
-			hasQ := len(qa.Short)+len(qa.Choice)+len(qa.Judge)+len(qa.Fill)+len(qa.TermExplanation)+len(qa.Essay)
+			hasQ := len(qa.Short) + len(qa.Choice) + len(qa.Judge) + len(qa.Fill) + len(qa.TermExplanation) + len(qa.Essay)
 			if hasQ == 0 {
 				xlog(tp, qa.Title, "章节测验无题目，跳过")
 				continue
@@ -520,7 +520,12 @@ func safeRunWorkAndExam(ctx context.Context, setting consoleConfig.Setting,
 	user *consoleConfig.User, cache *xuexitongApi.XueXiTUserCache,
 	course *xuexitong.XueXiTCourse, submitThreshold int, emit emitFn) {
 
-	getInt := func(p *int, d int) int { if p == nil { return d }; return *p }
+	getInt := func(p *int, d int) int {
+		if p == nil {
+			return d
+		}
+		return *p
+	}
 	cxWork := getInt(user.CoursesCustom.CxWorkSw, 1)
 	cxExam := getInt(user.CoursesCustom.CxExamSw, 1)
 
@@ -696,6 +701,34 @@ func safeExamAction(ctx context.Context, setting consoleConfig.Setting,
 	xlog("考试完成")
 }
 
+// hasAIConfig 判断 AI 答题是否配置完整
+func hasAIConfig(setting consoleConfig.Setting) bool {
+	ai := setting.AiSetting
+	return strings.TrimSpace(ai.APIKEY) != "" &&
+		strings.TrimSpace(ai.Model) != "" &&
+		fmt.Sprintf("%v", ai.AiType) != ""
+}
+
+// hasExternalQuestionBank 判断外部题库是否配置
+func hasExternalQuestionBank(setting consoleConfig.Setting) bool {
+	return strings.TrimSpace(setting.ApiQueSetting.Url) != ""
+}
+
+// randomChoiceAnswer 从选择题选项中随机选一个，返回答案列表、日志描述、是否成功
+func randomChoiceAnswer(q xuexitongApi.ChoiceQue) ([]string, string, bool) {
+	keys := make([]string, 0, len(q.Options))
+	for _, k := range []string{"A", "B", "C", "D", "E", "F", "G", "H"} {
+		if q.Options[k] != "" {
+			keys = append(keys, k)
+		}
+	}
+	if len(keys) == 0 {
+		return nil, "", false
+	}
+	k := keys[rand.Intn(len(keys))]
+	return []string{q.Options[k]}, fmt.Sprintf("%s=%s", k, q.Options[k]), true
+}
+
 // normalizeChoiceAnswers 将 AI 返回的答案列表映射到选项文本。
 func normalizeChoiceAnswers(q xuexitongApi.ChoiceQue, answers []string, pfx func(string)) []string {
 	optParts := []string{}
@@ -724,8 +757,8 @@ func normalizeChoiceAnswers(q xuexitongApi.ChoiceQue, answers []string, pfx func
 
 // normalizeJudgeAnswers 将 AI 返回的判断题答案统一为"正确"或"错误"。
 func normalizeJudgeAnswers(answers []string, pfx func(string)) []string {
-	trueSet  := map[string]bool{"正确":true,"对":true,"是":true,"true":true,"√":true,"✓":true,"a":true,"A":true}
-	falseSet := map[string]bool{"错误":true,"错":true,"否":true,"false":true,"×":true,"x":true,"X":true,"b":true,"B":true}
+	trueSet := map[string]bool{"正确": true, "对": true, "是": true, "true": true, "√": true, "✓": true, "a": true, "A": true}
+	falseSet := map[string]bool{"错误": true, "错": true, "否": true, "false": true, "×": true, "x": true, "X": true, "b": true, "B": true}
 	var out []string
 	for _, a := range answers {
 		trimmed := strings.TrimSpace(a)
@@ -760,10 +793,22 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 		emit("%s", formatXXTLog("学习通", cache.UserID, course.CourseName, tp, qa.Title, msg))
 	}
 
+	// 配置检查：未配置则跳过答题
 	switch user.CoursesCustom.AutoExam {
+	case 0:
+		pfx("AutoExam=0，跳过答题")
+		return
 	case 1:
+		if !hasAIConfig(setting) {
+			pfx("AI配置不完整，跳过答题")
+			return
+		}
 		pfx("正在AI自动写章节作业...")
 	case 2:
+		if !hasExternalQuestionBank(setting) {
+			pfx("外部题库未配置，跳过答题")
+			return
+		}
 		pfx("正在外挂题库自动答题")
 	case 3:
 		pfx("正在内置AI自动答题")
@@ -771,7 +816,9 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 
 	// callAI 调 AI 取答案，经 normalize 后写入题目
 	callAI := func(typeName string, aiMsg interface{}, setter func([]string) bool) {
-		if ctx.Err() != nil || tokenBad { return }
+		if ctx.Err() != nil || tokenBad {
+			return
+		}
 		pfx(fmt.Sprintf("调用AI：平台=%s model=%s 题型=%s", aiTypeStr, ai.Model, typeName))
 		answers, err := safeAnswerAIGet(cache.UserID, ai.AiUrl, ai.Model, ai.AiType, aiMsg, ai.APIKEY, nil, pfx)
 		if err != nil {
@@ -783,7 +830,9 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 			}
 			return
 		}
-		if len(answers) == 0 { return }
+		if len(answers) == 0 {
+			return
+		}
 		wrote := setter(answers)
 		if wrote {
 			pfx(fmt.Sprintf("已写入答案：题型=%s answers=%v", typeName, answers))
@@ -792,32 +841,53 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 		sleepCtx(ctx, time.Duration(rand.Intn(stopEnd-stopStart)+stopStart)*time.Second)
 	}
 	answerQ := func(fn func()) {
-		if ctx.Err() != nil { return }
+		if ctx.Err() != nil {
+			return
+		}
 		fn()
 		sleepCtx(ctx, time.Duration(rand.Intn(stopEnd-stopStart)+stopStart)*time.Second)
 	}
 
 	for i := range qa.Choice {
 		q := &qa.Choice[i]
+		gotAnswer := false
 		switch user.CoursesCustom.AutoExam {
 		case 1:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXChoiceQue: *q})
 			callAI("选择题", msg, func(a []string) bool {
 				norm := normalizeChoiceAnswers(*q, a, pfx)
-				if len(norm) == 0 { return false }
-				q.SetAnswers(norm); return true
+				if len(norm) == 0 {
+					return false
+				}
+				q.SetAnswers(norm)
+				gotAnswer = true
+				return true
 			})
 		case 2:
 			answerQ(func() {
 				q.AnswerExternalGet(setting.ApiQueSetting.Url)
-				if len(q.Answers) > 0 { answered++ }
+				if len(q.Answers) > 0 {
+					answered++
+					gotAnswer = true
+				}
 			})
 		case 3:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXChoiceQue: *q})
 			answerQ(func() {
 				q.AnswerXXTAIGet(cache, qa.ClassId, qa.CourseId, qa.Cpi, msg)
-				if len(q.Answers) > 0 { answered++ }
+				if len(q.Answers) > 0 {
+					answered++
+					gotAnswer = true
+				}
 			})
+		}
+		// 选择题随机兜底：AI/题库未获取到答案时随机选一项
+		if !gotAnswer && len(q.Options) > 0 {
+			if randAnswers, logText, ok := randomChoiceAnswer(*q); ok {
+				q.SetAnswers(randAnswers)
+				answered++
+				pfx(fmt.Sprintf("选择题未获取到有效答案，已随机选择：%s", logText))
+			}
 		}
 	}
 	for i := range qa.Judge {
@@ -827,19 +897,26 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXJudgeQue: *q})
 			callAI("判断题", msg, func(a []string) bool {
 				norm := normalizeJudgeAnswers(a, pfx)
-				if len(norm) == 0 { return false }
-				q.SetAnswers(norm); return true
+				if len(norm) == 0 {
+					return false
+				}
+				q.SetAnswers(norm)
+				return true
 			})
 		case 2:
 			answerQ(func() {
 				q.AnswerExternalGet(setting.ApiQueSetting.Url)
-				if len(q.Answers) > 0 { answered++ }
+				if len(q.Answers) > 0 {
+					answered++
+				}
 			})
 		case 3:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXJudgeQue: *q})
 			answerQ(func() {
 				q.AnswerXXTAIGet(cache, qa.ClassId, qa.CourseId, qa.Cpi, msg)
-				if len(q.Answers) > 0 { answered++ }
+				if len(q.Answers) > 0 {
+					answered++
+				}
 			})
 		}
 	}
@@ -849,84 +926,110 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 		case 1:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXFillQue: *q})
 			callAI("填空题", msg, func(a []string) bool {
-				q.SetAnswers(a); return len(q.OpFromAnswer) > 0
+				q.SetAnswers(a)
+				return len(q.OpFromAnswer) > 0
 			})
 		case 2:
 			answerQ(func() {
 				q.AnswerExternalGet(setting.ApiQueSetting.Url)
-				if len(q.OpFromAnswer) > 0 { answered++ }
+				if len(q.OpFromAnswer) > 0 {
+					answered++
+				}
 			})
 		case 3:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXFillQue: *q})
 			answerQ(func() {
 				q.AnswerXXTAIGet(cache, qa.ClassId, qa.CourseId, qa.Cpi, msg)
-				if len(q.OpFromAnswer) > 0 { answered++ }
+				if len(q.OpFromAnswer) > 0 {
+					answered++
+				}
 			})
 		}
 	}
 	for i := range qa.Short {
 		q := &qa.Short[i]
-		if q.OpFromAnswer == nil { q.OpFromAnswer = make(map[string][]string) }
+		if q.OpFromAnswer == nil {
+			q.OpFromAnswer = make(map[string][]string)
+		}
 		switch user.CoursesCustom.AutoExam {
 		case 1:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXShortQue: *q})
 			callAI("简答题", msg, func(a []string) bool {
-				q.SetAnswers(a); return len(q.OpFromAnswer) > 0
+				q.SetAnswers(a)
+				return len(q.OpFromAnswer) > 0
 			})
 		case 2:
 			answerQ(func() {
 				q.AnswerExternalGet(setting.ApiQueSetting.Url)
-				if len(q.OpFromAnswer) > 0 { answered++ }
+				if len(q.OpFromAnswer) > 0 {
+					answered++
+				}
 			})
 		case 3:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXShortQue: *q})
 			answerQ(func() {
 				q.AnswerXXTAIGet(cache, qa.ClassId, qa.CourseId, qa.Cpi, msg)
-				if len(q.OpFromAnswer) > 0 { answered++ }
+				if len(q.OpFromAnswer) > 0 {
+					answered++
+				}
 			})
 		}
 	}
 	for i := range qa.TermExplanation {
 		q := &qa.TermExplanation[i]
-		if q.OpFromAnswer == nil { q.OpFromAnswer = make(map[string][]string) }
+		if q.OpFromAnswer == nil {
+			q.OpFromAnswer = make(map[string][]string)
+		}
 		switch user.CoursesCustom.AutoExam {
 		case 1:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXTermExplanationQue: *q})
 			callAI("名词解释", msg, func(a []string) bool {
-				q.SetAnswers(a); return len(q.OpFromAnswer) > 0
+				q.SetAnswers(a)
+				return len(q.OpFromAnswer) > 0
 			})
 		case 2:
 			answerQ(func() {
 				q.AnswerExternalGet(setting.ApiQueSetting.Url)
-				if len(q.OpFromAnswer) > 0 { answered++ }
+				if len(q.OpFromAnswer) > 0 {
+					answered++
+				}
 			})
 		case 3:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXTermExplanationQue: *q})
 			answerQ(func() {
 				q.AnswerXXTAIGet(cache, qa.ClassId, qa.CourseId, qa.Cpi, msg)
-				if len(q.OpFromAnswer) > 0 { answered++ }
+				if len(q.OpFromAnswer) > 0 {
+					answered++
+				}
 			})
 		}
 	}
 	for i := range qa.Essay {
 		q := &qa.Essay[i]
-		if q.OpFromAnswer == nil { q.OpFromAnswer = make(map[string][]string) }
+		if q.OpFromAnswer == nil {
+			q.OpFromAnswer = make(map[string][]string)
+		}
 		switch user.CoursesCustom.AutoExam {
 		case 1:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXEssayQue: *q})
 			callAI("论述题", msg, func(a []string) bool {
-				q.SetAnswers(a); return len(q.OpFromAnswer) > 0
+				q.SetAnswers(a)
+				return len(q.OpFromAnswer) > 0
 			})
 		case 2:
 			answerQ(func() {
 				q.AnswerExternalGet(setting.ApiQueSetting.Url)
-				if len(q.OpFromAnswer) > 0 { answered++ }
+				if len(q.OpFromAnswer) > 0 {
+					answered++
+				}
 			})
 		case 3:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXEssayQue: *q})
 			answerQ(func() {
 				q.AnswerXXTAIGet(cache, qa.ClassId, qa.CourseId, qa.Cpi, msg)
-				if len(q.OpFromAnswer) > 0 { answered++ }
+				if len(q.OpFromAnswer) > 0 {
+					answered++
+				}
 			})
 		}
 	}
@@ -936,18 +1039,23 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 		case 1:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXMatchingQue: *q})
 			callAI("连线题", msg, func(a []string) bool {
-				q.SetAnswers(a); return len(q.Answers) > 0
+				q.SetAnswers(a)
+				return len(q.Answers) > 0
 			})
 		case 2:
 			answerQ(func() {
 				q.AnswerExternalGet(setting.ApiQueSetting.Url)
-				if len(q.Answers) > 0 { answered++ }
+				if len(q.Answers) > 0 {
+					answered++
+				}
 			})
 		case 3:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXMatchingQue: *q})
 			answerQ(func() {
 				q.AnswerXXTAIGet(cache, qa.ClassId, qa.CourseId, qa.Cpi, msg)
-				if len(q.Answers) > 0 { answered++ }
+				if len(q.Answers) > 0 {
+					answered++
+				}
 			})
 		}
 	}
@@ -958,11 +1066,17 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 
 	// 答案快照
 	choiceSnap := []string{}
-	for _, c := range qa.Choice { choiceSnap = append(choiceSnap, fmt.Sprintf("%s:%v", c.Qid, c.Answers)) }
+	for _, c := range qa.Choice {
+		choiceSnap = append(choiceSnap, fmt.Sprintf("%s:%v", c.Qid, c.Answers))
+	}
 	judgeSnap := []string{}
-	for _, c := range qa.Judge { judgeSnap = append(judgeSnap, fmt.Sprintf("%s:%v", c.Qid, c.Answers)) }
+	for _, c := range qa.Judge {
+		judgeSnap = append(judgeSnap, fmt.Sprintf("%s:%v", c.Qid, c.Answers))
+	}
 	fillSnap := []string{}
-	for _, c := range qa.Fill { fillSnap = append(fillSnap, fmt.Sprintf("%s:%v", c.Qid, c.OpFromAnswer)) }
+	for _, c := range qa.Fill {
+		fillSnap = append(fillSnap, fmt.Sprintf("%s:%v", c.Qid, c.OpFromAnswer))
+	}
 	pfx(fmt.Sprintf("提交前答案快照：choice=%s, judge=%s, fill=%s",
 		strings.Join(choiceSnap, "|"), strings.Join(judgeSnap, "|"), strings.Join(fillSnap, "|")))
 
@@ -980,7 +1094,9 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 			shouldSubmit = true
 		case 2:
 			thresh := submitThreshold
-			if thresh <= 0 { thresh = 100 }
+			if thresh <= 0 {
+				thresh = 100
+			}
 			if totalQ > 0 {
 				pct := answered * 100 / totalQ
 				shouldSubmit = pct >= thresh
@@ -993,7 +1109,9 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 
 	statusOK := false
 	if v := gojsonq.New().JSONString(resultStr).Find("status"); v != nil {
-		if b, ok := v.(bool); ok { statusOK = b }
+		if b, ok := v.(bool); ok {
+			statusOK = b
+		}
 	}
 	if statusOK {
 		pfx("章节作业答题完毕，服务器返回：" + resultStr)
@@ -1016,7 +1134,9 @@ func safeAnswerAIGet(userID, aiUrl, model string, aiType interface{}, msg interf
 
 	keyLen := len(apiKey)
 	keyPrefix := apiKey
-	if keyLen > 8 { keyPrefix = apiKey[:8] + "..." }
+	if keyLen > 8 {
+		keyPrefix = apiKey[:8] + "..."
+	}
 	pfx(fmt.Sprintf("AI Key 长度：%d 前缀：%s 接口：%s model：%s", keyLen, keyPrefix, endpoint, model))
 	if strings.Contains(apiKey, "/") || strings.HasPrefix(apiKey, "Qwen") || strings.HasPrefix(apiKey, "deepseek") {
 		pfx(fmt.Sprintf("API Key 字段疑似填成了模型名（前缀：%s），请检查全局设置 → API Key 字段", keyPrefix))
@@ -1034,7 +1154,9 @@ func safeAnswerAIGet(userID, aiUrl, model string, aiType interface{}, msg interf
 			for _, m := range arr {
 				role := fmt.Sprintf("%v", m["role"])
 				content := fmt.Sprintf("%v", m["content"])
-				if role == "" { role = "user" }
+				if role == "" {
+					role = "user"
+				}
 				messages = append(messages, oaiMsg{Role: role, Content: content})
 			}
 		}
@@ -1068,14 +1190,14 @@ func safeAnswerAIGet(userID, aiUrl, model string, aiType interface{}, msg interf
 	raw := string(rawBytes)
 
 	if resp.StatusCode == 401 || strings.Contains(raw, "Invalid token") || strings.Contains(raw, "Unauthorized") {
-		pfx(fmt.Sprintf("AI Token 无效（%d）：%s，请检查 API Key", resp.StatusCode, raw[:min(len(raw),200)]))
+		pfx(fmt.Sprintf("AI Token 无效（%d）：%s，请检查 API Key", resp.StatusCode, raw[:min(len(raw), 200)]))
 		return nil, fmt.Errorf("invalid_token")
 	}
 	if code := gojsonq.New().JSONString(raw).Find("code"); code != nil {
 		codeVal := fmt.Sprintf("%v", code)
 		if codeVal != "0" && codeVal != "<nil>" {
 			msg2 := gojsonq.New().JSONString(raw).Find("message")
-			pfx(fmt.Sprintf("AI 请求失败 code=%s message=%v，返回：%s", codeVal, msg2, raw[:min(len(raw),300)]))
+			pfx(fmt.Sprintf("AI 请求失败 code=%s message=%v，返回：%s", codeVal, msg2, raw[:min(len(raw), 300)]))
 			return nil, fmt.Errorf("api_error_%s", codeVal)
 		}
 	}
@@ -1101,10 +1223,11 @@ func safeAnswerAIGet(userID, aiUrl, model string, aiType interface{}, msg interf
 }
 
 // parseAIAnswers 从 AI 回复中提取答案列表，支持多种格式：
-//   JSON array:  ["A"] / ["房缩期"]（整段或嵌入文本中）
-//   JSON object: {"answer":"A"} / {"answer":["A","C"]} / {"answers":["A","C"]}
-//   Markdown 包裹的 JSON
-//   纯文本：房缩期
+//
+//	JSON array:  ["A"] / ["房缩期"]（整段或嵌入文本中）
+//	JSON object: {"answer":"A"} / {"answer":["A","C"]} / {"answers":["A","C"]}
+//	Markdown 包裹的 JSON
+//	纯文本：房缩期
 func parseAIAnswers(content string) ([]string, error) {
 	s := strings.TrimSpace(content)
 	// 去除 markdown 代码块
@@ -1113,12 +1236,16 @@ func parseAIAnswers(content string) ([]string, error) {
 	s = strings.TrimSpace(s)
 
 	// 尝试整段 JSON array
-	if arr, ok := tryParseArray(s); ok { return arr, nil }
+	if arr, ok := tryParseArray(s); ok {
+		return arr, nil
+	}
 
 	// 从文本中截取第一个 [ 到最后一个 ] 尝试 array
 	if i := strings.Index(s, "["); i >= 0 {
 		if j := strings.LastIndex(s, "]"); j > i {
-			if arr, ok := tryParseArray(s[i : j+1]); ok { return arr, nil }
+			if arr, ok := tryParseArray(s[i : j+1]); ok {
+				return arr, nil
+			}
 		}
 	}
 
@@ -1130,11 +1257,17 @@ func parseAIAnswers(content string) ([]string, error) {
 				if v := gojsonq.New().JSONString(obj).Find(key); v != nil {
 					switch val := v.(type) {
 					case string:
-						if val != "" { return []string{val}, nil }
+						if val != "" {
+							return []string{val}, nil
+						}
 					case []interface{}:
 						var out []string
-						for _, item := range val { out = append(out, fmt.Sprintf("%v", item)) }
-						if len(out) > 0 { return out, nil }
+						for _, item := range val {
+							out = append(out, fmt.Sprintf("%v", item))
+						}
+						if len(out) > 0 {
+							return out, nil
+						}
 					}
 				}
 			}
@@ -1152,13 +1285,19 @@ func parseAIAnswers(content string) ([]string, error) {
 
 func tryParseArray(s string) ([]string, bool) {
 	s = strings.TrimSpace(s)
-	if !strings.HasPrefix(s, "[") { return nil, false }
+	if !strings.HasPrefix(s, "[") {
+		return nil, false
+	}
 	var arr []string
-	if json.Unmarshal([]byte(s), &arr) == nil && len(arr) > 0 { return arr, true }
+	if json.Unmarshal([]byte(s), &arr) == nil && len(arr) > 0 {
+		return arr, true
+	}
 	var arri []interface{}
 	if json.Unmarshal([]byte(s), &arri) == nil && len(arri) > 0 {
 		var out []string
-		for _, v := range arri { out = append(out, fmt.Sprintf("%v", v)) }
+		for _, v := range arri {
+			out = append(out, fmt.Sprintf("%v", v))
+		}
 		return out, true
 	}
 	return nil, false
