@@ -137,12 +137,16 @@ func runWorker(uid string) int {
 			return 1
 		}
 		submitThreshold := 100
+		randomAnswerOnFail := 0
 		var cc service.CoursesCustom
-		if json.Unmarshal([]byte(po.CoursesCustom), &cc) == nil && cc.SubmitThresholdPercent > 0 {
-			submitThreshold = cc.SubmitThresholdPercent
+		if json.Unmarshal([]byte(po.CoursesCustom), &cc) == nil {
+			if cc.SubmitThresholdPercent > 0 {
+				submitThreshold = cc.SubmitThresholdPercent
+			}
+			randomAnswerOnFail = cc.RandomAnswerOnFail
 		}
 		p("登录成功，开始学习任务")
-		runErr = service.SafeRun(context.Background(), setting, &user, xxtCache, submitThreshold, emit)
+		runErr = service.SafeRun(context.Background(), setting, &user, xxtCache, submitThreshold, randomAnswerOnFail, emit)
 
 	case "YINGHUA":
 		p("英华参数: URL=%q Account=%q PasswordEnc空=%v 密码长度=%d",
