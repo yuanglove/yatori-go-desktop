@@ -1,20 +1,11 @@
 import { useState } from 'react'
 import {
   ExternalLink, FolderOpen, RefreshCw, ArrowUpCircle,
-  GitBranch, Shield, Layers, Cpu, Bell, Database
+  GitBranch, Shield
 } from 'lucide-react'
 import { OpenDataDir, OpenURL } from '../../wailsjs/go/main/App'
 import { APP_VERSION, PROJECT_RELEASES_URL, PROJECT_REPO_URL, SOURCE_REPO_URL } from '../lib/version'
 import { checkForUpdates } from '../lib/update'
-
-const FEATURES = [
-  { icon: Layers,    title: 'GUI',                desc: 'Wails v2 + React + TypeScript Windows desktop' },
-  { icon: Cpu,       title: 'Go core',            desc: 'yatori-go-console Go core, zero rewrite' },
-  { icon: Database,  title: '账号管理',            desc: '多平台账号增删改，字段级课程自定义配置' },
-  { icon: Bell,      title: '任务控制',            desc: 'worker 子进程运行，支持硬停止，实时日志流' },
-  { icon: Shield,    title: '配置持久化',          desc: '主题、设置和日志统一保存到数据目录' },
-  { icon: RefreshCw, title: '版本检测',            desc: 'GitHub Release 自动检测并通知更新' },
-]
 
 export default function About() {
   const [checking, setChecking] = useState(false)
@@ -101,20 +92,13 @@ export default function About() {
 
       <div className="card">
         <div className="card-title">{'本项目做了什么'}</div>
-        <div className="about-feature-grid">
-          {FEATURES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="about-feature-item">
-              <span className="about-feature-icon">
-                <Icon size={15} strokeWidth={1.75} />
-              </span>
-              <div>
-                <div className="about-feature-title">{title}</div>
-                <div className="about-feature-desc">{desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <p className="about-text-block">
+          {'使用 Wails v2 + React + TypeScript 构建 Windows 桌面界面，复用 yatori-go-console 的核心 Go 逻辑。增加账号管理、任务控制、日志中心、全局设置和课程进度页面。支持 worker 子进程运行任务并支持硬停止，支持多套主题保存到 config.yaml，增加 GitHub 自动版本检测。配置、数据库和日志统一保存到 '}
+          <code className="about-inline-path">{'%APPDATA%\\yatori-go-console'}</code>
+          {'。'}
+        </p>
       </div>
+
 
       <div className="card">
         <div className="card-title">{'项目来源'}</div>
