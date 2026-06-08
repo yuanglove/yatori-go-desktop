@@ -5,7 +5,6 @@ import (
 
 	"github.com/yatori-dev/yatori-go-core/aggregation/yinghua"
 	yinghuaApi "github.com/yatori-dev/yatori-go-core/api/yinghua"
-	coreUtils "github.com/yatori-dev/yatori-go-core/utils"
 )
 
 func getYingHuaCourses(po AccountPO) ([]CourseVO, error) {
@@ -15,7 +14,7 @@ func getYingHuaCourses(po AccountPO) ([]CourseVO, error) {
 	if po.PasswordEnc == "" {
 		return nil, fmt.Errorf("英华密码未保存")
 	}
-	coreUtils.YatoriCoreInit()
+	EnsureCoreRuntime()
 	cache := &yinghuaApi.YingHuaUserCache{
 		PreUrl:   po.URL,
 		Account:  po.Account,

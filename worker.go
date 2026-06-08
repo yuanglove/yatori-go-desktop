@@ -7,12 +7,11 @@ import (
 	"runtime/debug"
 	"time"
 
-	consoleConfig "yatori-go-console/config"
-	coreUtils "github.com/yatori-dev/yatori-go-core/utils"
 	"github.com/yatori-dev/yatori-go-core/aggregation/yinghua"
 	xuexitongApiPkg "github.com/yatori-dev/yatori-go-core/api/xuexitong"
 	yinghuaApiPkg "github.com/yatori-dev/yatori-go-core/api/yinghua"
 	ctype "github.com/yatori-dev/yatori-go-core/models/ctype"
+	consoleConfig "yatori-go-console/config"
 	"yatori-go-desktop/service"
 )
 
@@ -107,7 +106,7 @@ func runWorker(uid string) int {
 	// 按平台决定是否初始化 ONNX Runtime
 	if needsCoreRuntime(po.AccountType) {
 		p("初始化 Core Runtime...")
-		coreUtils.YatoriCoreInit()
+		service.EnsureCoreRuntime()
 		p("Core Runtime 初始化完成")
 	} else {
 		p("跳过 Core Runtime 初始化：当前平台无需 OCR")

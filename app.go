@@ -301,17 +301,31 @@ func (a *App) OpenURL(url string) BoolResult {
 }
 
 type CourseListResult struct {
-	Ok    bool              `json:"ok"`
+	Ok    bool               `json:"ok"`
 	Data  []service.CourseVO `json:"data"`
-	Error string            `json:"error,omitempty"`
+	Error string             `json:"error,omitempty"`
 }
 
 func (a *App) GetCourses(uid string) CourseListResult {
-	data, err := service.GetCourses(uid)
-	if err != nil {
-		return CourseListResult{Error: err.Error()}
+	type result struct {
+		data []service.CourseVO
+		err  error
 	}
-	return CourseListResult{Ok: true, Data: data}
+	ch := make(chan result, 1)
+	go func() {
+		data, err := service.GetCourses(uid)
+		ch <- result{data: data, err: err}
+	}()
+
+	select {
+	case r := <-ch:
+		if r.err != nil {
+			return CourseListResult{Error: r.err.Error()}
+		}
+		return CourseListResult{Ok: true, Data: r.data}
+	case <-time.After(45 * time.Second):
+		return CourseListResult{Error: "课程进度拉取超时，请稍后重试"}
+	}
 }
 
 func (a *App) CheckForUpdates(currentVersion string) UpdateResult {
