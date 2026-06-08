@@ -17,7 +17,7 @@ export interface User {
 export interface CoursesCustom {
   studyTime?:string; cxNode?:number; cxChapterTestSw?:number; cxWorkSw?:number; cxExamSw?:number
   shuffleSw:number; videoModel:number; autoExam:number; examAutoSubmit:number
-  submitThresholdPercent?:number
+  submitThresholdPercent?:number; randomAnswerOnFail?:number
   excludeCourses:string[]; includeCourses:string[]
 }
 export interface AccountVO {

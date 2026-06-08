@@ -63,7 +63,7 @@ func formatTaskPoint(k xuexitong.KnowledgeItem) string {
 // SafeRun 执行学习任务，返回 error（不会 os.Exit/log.Fatal）
 func SafeRun(ctx context.Context, setting consoleConfig.Setting,
 	user *consoleConfig.User, cache *xuexitongApi.XueXiTUserCache,
-	submitThreshold int, emit emitFn) error {
+	submitThreshold int, randomAnswerOnFail int, emit emitFn) error {
 
 	if emit == nil {
 		emit = func(f string, a ...interface{}) {}
@@ -84,19 +84,24 @@ func SafeRun(ctx context.Context, setting consoleConfig.Setting,
 			c.CourseName, c.CourseID, c.Key, c.IsStart, c.State)
 	}
 
+	// 创建账号级节点并发信号量
+	nodeConcurrency := 1
+	if user.CoursesCustom.CxNode != nil && *user.CoursesCustom.CxNode > 0 {
+		nodeConcurrency = *user.CoursesCustom.CxNode
+	}
+	if nodeConcurrency > 8 {
+		nodeConcurrency = 8
+	}
+	nodeSem := make(chan struct{}, nodeConcurrency)
+	var nodeSemMu sync.Mutex
+	nodeSemUsed := 0
+	sysLog("学习通视频任务点并发上限：%d", nodeConcurrency)
+
 	// videoModel=3 多任务点：预先登录多份 cache
 	var model3Caches []xuexitongApi.XueXiTUserCache
 	if user.CoursesCustom.VideoModel == 3 {
-		num := 3
-		if user.CoursesCustom.CxNode != nil && *user.CoursesCustom.CxNode != 0 {
-			num = *user.CoursesCustom.CxNode
-		}
-		if user.CoursesCustom.CxNode != nil && *user.CoursesCustom.CxNode == -1 {
-			num = 999
-			sysLog("多任务点无限制模式（CxNode=-1），将同时登录大量次数，注意风控")
-		} else {
-			sysLog("多任务点模式，CxNode=%d，将同时登录 %d 次", num, num)
-		}
+		num := nodeConcurrency
+		sysLog("多任务点模式，将预登录 %d 份 cache，并由并发槽控制实际视频并发", num)
 		for i := 0; i < num; i++ {
 			cp := *cache
 			if i > 0 {
@@ -139,13 +144,13 @@ func SafeRun(ctx context.Context, setting consoleConfig.Setting,
 
 		if user.CoursesCustom.VideoModel == 1 {
 			// 串行
-			safeRunCourse(ctx, setting, user, cache, &course, model3Caches, submitThreshold, emit)
+			safeRunCourse(ctx, setting, user, cache, &course, model3Caches, nodeSem, &nodeSemMu, &nodeSemUsed, submitThreshold, randomAnswerOnFail, emit)
 		} else {
 			// videoModel=2（并发课程）或 videoModel=3（并发任务点，课程层面仍并发）
 			wg.Add(1)
 			go func(c xuexitong.XueXiTCourse) {
 				defer wg.Done()
-				safeRunCourse(ctx, setting, user, cache, &c, model3Caches, submitThreshold, emit)
+				safeRunCourse(ctx, setting, user, cache, &c, model3Caches, nodeSem, &nodeSemMu, &nodeSemUsed, submitThreshold, randomAnswerOnFail, emit)
 			}(course)
 		}
 	}
@@ -159,8 +164,8 @@ func SafeRun(ctx context.Context, setting consoleConfig.Setting,
 func safeRunCourse(ctx context.Context, setting consoleConfig.Setting,
 	user *consoleConfig.User, cache *xuexitongApi.XueXiTUserCache,
 	course *xuexitong.XueXiTCourse,
-	model3Caches []xuexitongApi.XueXiTUserCache,
-	submitThreshold int, emit emitFn) {
+	model3Caches []xuexitongApi.XueXiTUserCache, nodeSem chan struct{}, nodeSemMu *sync.Mutex, nodeSemUsed *int,
+	submitThreshold int, randomAnswerOnFail int, emit emitFn) {
 
 	if ctx.Err() != nil {
 		return
@@ -171,7 +176,7 @@ func safeRunCourse(ctx context.Context, setting consoleConfig.Setting,
 	}
 
 	// 章节学习
-	if err := safeRunChapter(ctx, setting, user, cache, course, model3Caches, submitThreshold, emit); err != nil {
+	if err := safeRunChapter(ctx, setting, user, cache, course, model3Caches, nodeSem, nodeSemMu, nodeSemUsed, submitThreshold, randomAnswerOnFail, emit); err != nil {
 		emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, "", "", "章节学习错误: "+err.Error()))
 	}
 	// 作业/考试
@@ -182,8 +187,8 @@ func safeRunCourse(ctx context.Context, setting consoleConfig.Setting,
 func safeRunChapter(ctx context.Context, setting consoleConfig.Setting,
 	user *consoleConfig.User, cache *xuexitongApi.XueXiTUserCache,
 	course *xuexitong.XueXiTCourse,
-	model3Caches []xuexitongApi.XueXiTUserCache,
-	submitThreshold int, emit emitFn) error {
+	model3Caches []xuexitongApi.XueXiTUserCache, nodeSem chan struct{}, nodeSemMu *sync.Mutex, nodeSemUsed *int,
+	submitThreshold int, randomAnswerOnFail int, emit emitFn) error {
 
 	// 只在进度未完成且课程未结束时执行
 	if !(course.JobRate < 100 && course.State != 1) {
@@ -237,11 +242,7 @@ func safeRunChapter(ctx context.Context, setting consoleConfig.Setting,
 	emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, "", "", "正在学习该课程"))
 
 	if user.CoursesCustom.VideoModel == 3 && len(model3Caches) > 0 {
-		// 多任务点并发
-		queue := make(chan int, len(model3Caches))
-		for i := range model3Caches {
-			queue <- i
-		}
+		// 多任务点并发，用 nodeSem 控制并发
 		var nodeLock sync.WaitGroup
 		for index := range nodes {
 			if ctx.Err() != nil {
@@ -252,14 +253,17 @@ func safeRunChapter(ctx context.Context, setting consoleConfig.Setting,
 				emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, tp, "", "任务点已完成，跳过"))
 				continue
 			}
-			idx := <-queue
 			nodeLock.Add(1)
-			go func(idx, index int) {
+			go func(index int) {
 				defer nodeLock.Done()
-				defer func() { queue <- idx }()
-				c := model3Caches[idx]
-				safeRunNode(ctx, setting, user, &c, course, pointAction, action, nodes, index, key, courseId, submitThreshold, emit)
-			}(idx, index)
+				var nodeCache xuexitongApi.XueXiTUserCache
+				if len(model3Caches) > 0 {
+					nodeCache = model3Caches[index%len(model3Caches)]
+				} else {
+					nodeCache = *cache
+				}
+				safeRunNode(ctx, setting, user, &nodeCache, course, pointAction, action, nodes, index, key, courseId, nodeSem, nodeSemMu, nodeSemUsed, submitThreshold, randomAnswerOnFail, emit)
+			}(index)
 		}
 		nodeLock.Wait()
 	} else {
@@ -273,7 +277,7 @@ func safeRunChapter(ctx context.Context, setting consoleConfig.Setting,
 				emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, tp, "", "任务点已完成，跳过"))
 				continue
 			}
-			safeRunNode(ctx, setting, user, cache, course, pointAction, action, nodes, index, key, courseId, submitThreshold, emit)
+			safeRunNode(ctx, setting, user, cache, course, pointAction, action, nodes, index, key, courseId, nodeSem, nodeSemMu, nodeSemUsed, submitThreshold, randomAnswerOnFail, emit)
 		}
 	}
 	return nil
@@ -283,7 +287,7 @@ func safeRunNode(ctx context.Context, setting consoleConfig.Setting,
 	user *consoleConfig.User, cache *xuexitongApi.XueXiTUserCache,
 	course *xuexitong.XueXiTCourse,
 	pointAction xuexitong.ChaptersList, action xuexitong.ChaptersList,
-	nodes []int, index, key, courseId int, submitThreshold int, emit emitFn) {
+	nodes []int, index, key, courseId int, nodeSem chan struct{}, nodeSemMu *sync.Mutex, nodeSemUsed *int, submitThreshold int, randomAnswerOnFail int, emit emitFn) {
 
 	if ctx.Err() != nil {
 		return
@@ -322,6 +326,25 @@ func safeRunNode(ctx context.Context, setting consoleConfig.Setting,
 
 	// 视频/音频
 	if videoDTOs != nil && user.CoursesCustom.VideoModel != 0 {
+		// acquire nodeSem
+		nodeSem <- struct{}{}
+		nodeSemMu.Lock()
+		(*nodeSemUsed)++
+		used := *nodeSemUsed
+		total := cap(nodeSem)
+		nodeSemMu.Unlock()
+		xlog(tp, "", fmt.Sprintf("开始视频任务，占用并发槽 %d/%d", used, total))
+		defer func() {
+			<-nodeSem
+			nodeSemMu.Lock()
+			if *nodeSemUsed > 0 {
+				*nodeSemUsed--
+			}
+			used := *nodeSemUsed
+			total := cap(nodeSem)
+			nodeSemMu.Unlock()
+			xlog(tp, "", fmt.Sprintf("视频任务结束，释放并发槽，当前 %d/%d", used, total))
+		}()
 		for _, v := range videoDTOs {
 			if ctx.Err() != nil {
 				return
@@ -429,7 +452,7 @@ func safeRunNode(ctx context.Context, setting consoleConfig.Setting,
 				xlog(tp, qa.Title, "章节测验无题目，跳过")
 				continue
 			}
-			safeChapterTestAction(ctx, setting, user, cache, course, curKnowledge, qa, submitThreshold, emit)
+			safeChapterTestAction(ctx, setting, user, cache, course, curKnowledge, qa, submitThreshold, randomAnswerOnFail, emit)
 		}
 	}
 
@@ -779,7 +802,7 @@ func normalizeJudgeAnswers(answers []string, pfx func(string)) []string {
 func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 	user *consoleConfig.User, cache *xuexitongApi.XueXiTUserCache,
 	course *xuexitong.XueXiTCourse, knowledge xuexitong.KnowledgeItem,
-	qa xuexitongApi.Question, submitThreshold int, emit emitFn) {
+	qa xuexitongApi.Question, submitThreshold int, randomAnswerOnFail int, emit emitFn) {
 
 	ai := setting.AiSetting
 	aiTypeStr := fmt.Sprintf("%v", ai.AiType)
@@ -883,15 +906,20 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 		}
 		// 选择题随机兜底：AI/题库未获取到答案时随机选一项
 		if !gotAnswer && len(q.Options) > 0 {
-			if randAnswers, logText, ok := randomChoiceAnswer(*q); ok {
-				q.SetAnswers(randAnswers)
-				answered++
-				pfx(fmt.Sprintf("选择题未获取到有效答案，已随机选择：%s", logText))
+			if randomAnswerOnFail == 1 {
+				if randAnswers, logText, ok := randomChoiceAnswer(*q); ok {
+					q.SetAnswers(randAnswers)
+					answered++
+					pfx(fmt.Sprintf("选择题未获取到有效答案，已随机选择：%s", logText))
+				}
+			} else {
+				pfx("选择题未获取到有效答案，随机兜底关闭，跳过")
 			}
 		}
 	}
 	for i := range qa.Judge {
 		q := &qa.Judge[i]
+		gotAnswer := false
 		switch user.CoursesCustom.AutoExam {
 		case 1:
 			msg := xuexitong.AIProblemMessage(qa.Title, q.Type.String(), xuexitongApi.ExamTurn{XueXJudgeQue: *q})
@@ -901,6 +929,7 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 					return false
 				}
 				q.SetAnswers(norm)
+				gotAnswer = true
 				return true
 			})
 		case 2:
@@ -908,6 +937,7 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 				q.AnswerExternalGet(setting.ApiQueSetting.Url)
 				if len(q.Answers) > 0 {
 					answered++
+					gotAnswer = true
 				}
 			})
 		case 3:
@@ -916,8 +946,21 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 				q.AnswerXXTAIGet(cache, qa.ClassId, qa.CourseId, qa.Cpi, msg)
 				if len(q.Answers) > 0 {
 					answered++
+					gotAnswer = true
 				}
 			})
+		}
+		// 判断题随机兜底
+		if !gotAnswer {
+			if randomAnswerOnFail == 1 {
+				choices := []string{"正确", "错误"}
+				ans := choices[rand.Intn(2)]
+				q.SetAnswers([]string{ans})
+				answered++
+				pfx(fmt.Sprintf("判断题未获取到有效答案，已随机选择：%s", ans))
+			} else {
+				pfx("判断题未获取到有效答案，随机兜底关闭，跳过")
+			}
 		}
 	}
 	for i := range qa.Fill {

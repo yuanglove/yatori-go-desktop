@@ -94,9 +94,9 @@ export default function TasksPage() {
     <div className="page">
       <div className="page-title">任务控制</div>
       <div className="alert alert-info" style={{ marginBottom: 14 }}>
-        仅用于本人已授权账号。学习通 GUI 模式支持：登录、启动、停止、课程包含/排除过滤。
-        <strong>不支持</strong> videoModel=2（多课程并发）/ videoModel=3（多任务点并发），这些需使用 <code>-cli</code>。
-        停止会立即终止该账号的学习任务（取消后续任务点，当前 HTTP 请求完成后退出）。
+        仅用于本人已授权账号。学习通 GUI 模式支持：登录、启动、停止、课程包含/排除过滤、普通/多课程/多任务点模式。
+        CxNode 控制同一账号内同时进行的视频任务点数量；全局最大任务数只控制同时运行的账号数量。
+        停止会立即终止该账号的学习任务。
       </div>
       <div className="card" style={{ padding: 0 }}>
         <table className="table">

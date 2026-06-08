@@ -74,6 +74,7 @@ type CoursesCustom struct {
 	AutoExam               int              `yaml:"autoExam" json:"autoExam"`
 	ExamAutoSubmit         int              `yaml:"examAutoSubmit" json:"examAutoSubmit"`
 	SubmitThresholdPercent int              `yaml:"submitThresholdPercent,omitempty" json:"submitThresholdPercent,omitempty"`
+	RandomAnswerOnFail     int              `yaml:"randomAnswerOnFail,omitempty" json:"randomAnswerOnFail,omitempty"`
 	ExcludeCourses         []string         `yaml:"excludeCourses" json:"excludeCourses"`
 	IncludeCourses         []string         `yaml:"includeCourses" json:"includeCourses"`
 	CoursesSettings        []CourseSettings `yaml:"coursesSettings,omitempty" json:"coursesSettings,omitempty"`

@@ -171,7 +171,7 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
         <Section title="课程自定义">
           {req.accountType === 'XUEXITONG' && (
             <div className="alert alert-warn" style={{marginBottom:10}}>
-              GUI 启动仅支持普通模式 + 课程包含/排除过滤。videoModel 2/3（多课程/多任务点并发）及 CxNode 配置仅在 CLI 模式（-cli）生效，保存不影响 CLI 使用。
+              GUI 启动支持普通/多课程/多任务点模式。CxNode 控制同一账号内同时进行的视频任务点数量；全局最大任务数只控制同时运行的账号数量。
             </div>
           )}
           <div className="form-row form-row-3">
@@ -180,8 +180,8 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 onChange={e => setCC('videoModel', Number(e.target.value))}>
                 <option value={0}>0 不刷</option>
                 <option value={1}>1 普通（GUI 可用）</option>
-                <option value={2}>2 多课程并发（仅 CLI）</option>
-                <option value={3}>3 多任务点并发（仅 CLI）</option>
+                <option value={2}>2 多课程并发</option>
+                <option value={3}>3 多任务点并发</option>
               </select>
             </FormGroup>
             <FormGroup label="自动答题方式">
@@ -256,6 +256,13 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 onChange={e => setCC('cxWorkSw', Number(e.target.value))}>
                 <option value={0}>关闭</option><option value={1}>开启</option>
               </select>
+            </FormGroup>
+            <FormGroup label="AI/题库失败后随机答选择题/判断题">
+              <select className="form-select" value={req.coursesCustom.randomAnswerOnFail ?? 0}
+                onChange={e => setCC('randomAnswerOnFail', Number(e.target.value))}>
+                <option value={0}>关闭</option><option value={1}>开启</option>
+              </select>
+              <div className="text-muted text-sm" style={{marginTop:3}}>仅在已配置 AI 或题库、但未获取到有效答案时生效；只随机选择题和判断题。</div>
             </FormGroup>
             <FormGroup label="考试开关（CxExamSw）">
               <select className="form-select" value={req.coursesCustom.cxExamSw ?? 1}

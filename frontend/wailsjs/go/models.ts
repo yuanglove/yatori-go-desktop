@@ -334,6 +334,7 @@ export namespace service {
 	    autoExam: number;
 	    examAutoSubmit: number;
 	    submitThresholdPercent?: number;
+	    randomAnswerOnFail?: number;
 	    excludeCourses: string[];
 	    includeCourses: string[];
 	    coursesSettings?: CourseSettings[];
@@ -354,6 +355,7 @@ export namespace service {
 	        this.autoExam = source["autoExam"];
 	        this.examAutoSubmit = source["examAutoSubmit"];
 	        this.submitThresholdPercent = source["submitThresholdPercent"];
+	        this.randomAnswerOnFail = source["randomAnswerOnFail"];
 	        this.excludeCourses = source["excludeCourses"];
 	        this.includeCourses = source["includeCourses"];
 	        this.coursesSettings = this.convertValues(source["coursesSettings"], CourseSettings);
