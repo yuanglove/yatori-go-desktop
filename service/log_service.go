@@ -26,8 +26,8 @@ func NewLogHub() *LogHub { return &LogHub{} }
 // ansiRe 匹配所有 ANSI 转义序列
 var ansiRe = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
 
-func stripANSI(s string) string  { return ansiRe.ReplaceAllString(s, "") }
-func StripANSI(s string) string  { return ansiRe.ReplaceAllString(s, "") }
+func stripANSI(s string) string { return ansiRe.ReplaceAllString(s, "") }
+func StripANSI(s string) string { return ansiRe.ReplaceAllString(s, "") }
 
 func (h *LogHub) Push(msg string) {
 	msg = toUTF8(stripANSI(msg))
@@ -99,8 +99,8 @@ func (h *LogHub) HijackWriter(emit func(string)) io.Writer {
 }
 
 // toUTF8 尝试把 GBK 编码的字符串转为 UTF-8；如果已是合法 UTF-8 则原样返回
-func toUTF8(s string) string  { return NormalizeLogText(s) }
-func ToUTF8(s string) string  { return NormalizeLogText(s) }
+func toUTF8(s string) string { return NormalizeLogText(s) }
+func ToUTF8(s string) string { return NormalizeLogText(s) }
 
 // NormalizeLogText 修复常见编码问题：
 //  1. 非法 UTF-8（GBK 字节流被当 UTF-8）→ GBK decode
@@ -166,7 +166,7 @@ func hasCJK(s string) bool {
 func isCoreLog(line string) bool {
 	for _, kw := range []string{
 		"课程", "任务点", "视频", "学时", "提交", "学习", "登录",
-		"拉取", "章节", "考试", "完成", "失败", "错误", "跳过",
+		"拉取", "章节", "考试", "完成", "失败", "错误",
 		"INFO", "WARN", "ERROR", "[系统]",
 	} {
 		if strings.Contains(line, kw) {
