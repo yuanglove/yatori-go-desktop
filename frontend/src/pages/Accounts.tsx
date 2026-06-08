@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
 import type { AccountVO, AccountReq, CoursesCustom } from '../lib/api'
 import { useAsync, Confirm, Section, FormGroup, Spinner } from '../components/shared'
@@ -20,9 +21,9 @@ const emptyReq = (): AccountReq => ({
 })
 
 function guiBadge(g: string) {
-  if (g === 'full')        return <span className="badge badge-full">完整支持</span>
-  if (g === 'config-only') return <span className="badge badge-config">仅配置</span>
-  return <span className="badge badge-none">暂不支持</span>
+  if (g === 'full')        return <span className="badge badge-full">{'完整支持'}</span>
+  if (g === 'config-only') return <span className="badge badge-config">{'仅配置'}</span>
+  return <span className="badge badge-none">{'暂不支持'}</span>
 }
 
 export default function AccountsPage() {
@@ -63,8 +64,11 @@ export default function AccountsPage() {
   return (
     <div className="page">
       <div className="flex-between" style={{ marginBottom: 18 }}>
-        <div className="page-title" style={{ marginBottom: 0 }}>账号管理</div>
-        <button className="btn btn-primary" onClick={openAdd}>+ 添加账号</button>
+        <div className="page-title" style={{ marginBottom: 0 }}>{'账号管理'}</div>
+        <button className="btn btn-primary" onClick={openAdd}>
+          <Plus size={14} strokeWidth={2.5} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+          {'添加账号'}
+        </button>
       </div>
 
       {loading ? <Spinner /> : (
@@ -72,7 +76,7 @@ export default function AccountsPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>平台</th><th>账号</th><th>备注</th><th>代理</th><th>GUI 支持</th><th>操作</th>
+                <th>{'平台'}</th><th>{'账号'}</th><th>{'备注'}</th><th>{'代理'}</th><th>{'GUI 支持'}</th><th>{'操作'}</th>
               </tr>
             </thead>
             <tbody>
@@ -85,15 +89,21 @@ export default function AccountsPage() {
                   <td>{guiBadge(a.guiSupport)}</td>
                   <td>
                     <div className="flex-row">
-                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(a)}>编辑</button>
-                      <button className="btn btn-danger btn-sm" onClick={() => setDelUid(a.uid)}>删除</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(a)}>
+                        <Pencil size={13} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                        {'编辑'}
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => setDelUid(a.uid)}>
+                        <Trash2 size={13} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                        {'删除'}
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
               {(accounts ?? []).length === 0 && (
                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px 24px', color: 'var(--text3)' }}>
-                  暂无账号，点击"添加账号"开始
+                  {'暂无账号，点击"添加账号"开始'}
                 </td></tr>
               )}
             </tbody>
@@ -121,6 +131,10 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
   const setCC = (k: keyof CoursesCustom, v: unknown) =>
     onChange({ ...req, coursesCustom: { ...req.coursesCustom, [k]: v } })
 
+  const urlLabel = req.accountType === 'YINGHUA' ? '平台 URL *（英华必填）' : '平台 URL'
+  const urlPlaceholder = req.accountType === 'YINGHUA' ? '必填，如 https://xxx.yinghuaxuetang.com' : '部分平台必填'
+  const pwdLabel = req.uid ? '密码（留空保留原密码）' : '密码 *'
+
   return (
     <div className="modal-overlay">
       <div className="modal">
@@ -132,19 +146,19 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
             <FormGroup label="平台类型 *">
               <select className="form-select" value={req.accountType}
                 onChange={e => set('accountType', e.target.value)}>
-                {PLATFORMS.map(p => <option key={p.code} value={p.code}>{p.name} ({p.code})</option>)}
+                {PLATFORMS.map(p => <option key={p.code} value={p.code}>{p.name + ' (' + p.code + ')'}</option>)}
               </select>
             </FormGroup>
-            <FormGroup label={req.accountType === 'YINGHUA' ? '平台 URL *（英华必填）' : '平台 URL'}>
+            <FormGroup label={urlLabel}>
               <input className="form-input" value={req.url}
-                placeholder={req.accountType === 'YINGHUA' ? '必填，如 https://xxx.yinghuaxuetang.com' : '部分平台必填'}
+                placeholder={urlPlaceholder}
                 onChange={e => set('url', e.target.value)} />
             </FormGroup>
             <FormGroup label="账号 *">
               <input className="form-input" value={req.account}
                 onChange={e => set('account', e.target.value)} />
             </FormGroup>
-            <FormGroup label={req.uid ? '密码（留空保留原密码）' : '密码 *'}>
+            <FormGroup label={pwdLabel}>
               <input className="form-input" type="password" value={req.password}
                 placeholder={req.uid ? '已保存密码，留空不修改' : ''}
                 onChange={e => set('password', e.target.value)} />
@@ -156,7 +170,7 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
             <FormGroup label="使用代理">
               <select className="form-select" value={req.isProxy}
                 onChange={e => set('isProxy', Number(e.target.value))}>
-                <option value={0}>否</option><option value={1}>是</option>
+                <option value={0}>{'否'}</option><option value={1}>{'是'}</option>
               </select>
             </FormGroup>
           </div>
@@ -170,33 +184,33 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
         <Section title="课程自定义">
           {req.accountType === 'XUEXITONG' && (
             <div className="alert alert-info" style={{ marginBottom: 12 }}>
-              CxNode 控制同一账号内同时进行的视频任务点数量；全局最大任务数只控制同时运行的账号数量。
+              {'CxNode 控制同一账号内同时进行的视频任务点数量；全局最大任务数只控制同时运行的账号数量。'}
             </div>
           )}
           <div className="form-row form-row-3">
             <FormGroup label="视频模式">
               <select className="form-select" value={req.coursesCustom.videoModel}
                 onChange={e => setCC('videoModel', Number(e.target.value))}>
-                <option value={0}>0 不刷</option>
-                <option value={1}>1 普通（GUI 可用）</option>
-                <option value={2}>2 多课程并发</option>
-                <option value={3}>3 多任务点并发</option>
+                <option value={0}>{'0 不刷'}</option>
+                <option value={1}>{'1 普通（GUI 可用）'}</option>
+                <option value={2}>{'2 多课程并发'}</option>
+                <option value={3}>{'3 多任务点并发'}</option>
               </select>
             </FormGroup>
             <FormGroup label="自动答题方式">
               <select className="form-select" value={req.coursesCustom.autoExam}
                 onChange={e => setCC('autoExam', Number(e.target.value))}>
-                <option value={0}>0 关闭</option>
-                <option value={1}>1 AI 答题</option>
-                <option value={2}>2 外部题库</option>
+                <option value={0}>{'0 关闭'}</option>
+                <option value={1}>{'1 AI 答题'}</option>
+                <option value={2}>{'2 外部题库'}</option>
               </select>
             </FormGroup>
             <FormGroup label="自动提交试卷">
               <select className="form-select" value={req.coursesCustom.examAutoSubmit}
                 onChange={e => setCC('examAutoSubmit', Number(e.target.value))}>
-                <option value={0}>0 不提交</option>
-                <option value={1}>1 提交</option>
-                <option value={2}>2 智能提交</option>
+                <option value={0}>{'0 不提交'}</option>
+                <option value={1}>{'1 提交'}</option>
+                <option value={2}>{'2 智能提交'}</option>
               </select>
             </FormGroup>
             {req.coursesCustom.examAutoSubmit === 2 && (
@@ -206,14 +220,14 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                     ? 100 : req.coursesCustom.submitThresholdPercent}
                   onChange={e => setCC('submitThresholdPercent', Math.min(100, Math.max(1, Number(e.target.value))))} />
                 <div className="text-muted text-sm" style={{ marginTop: 3 }}>
-                  已答题数量达到总题数该百分比时提交；未达到则只保存。
+                  {'已答题数量达到总题数该百分比时提交；未达到则只保存。'}
                 </div>
               </FormGroup>
             )}
             <FormGroup label="打乱顺序">
               <select className="form-select" value={req.coursesCustom.shuffleSw}
                 onChange={e => setCC('shuffleSw', Number(e.target.value))}>
-                <option value={0}>关闭</option><option value={1}>开启</option>
+                <option value={0}>{'关闭'}</option><option value={1}>{'开启'}</option>
               </select>
             </FormGroup>
             <FormGroup label="WeLearn 学时时间范围">
@@ -230,28 +244,28 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
             <FormGroup label="章节测验（CxChapterTestSw）">
               <select className="form-select" value={req.coursesCustom.cxChapterTestSw ?? 1}
                 onChange={e => setCC('cxChapterTestSw', Number(e.target.value))}>
-                <option value={0}>关闭</option><option value={1}>开启</option>
+                <option value={0}>{'关闭'}</option><option value={1}>{'开启'}</option>
               </select>
             </FormGroup>
             <FormGroup label="作业（CxWorkSw）">
               <select className="form-select" value={req.coursesCustom.cxWorkSw ?? 1}
                 onChange={e => setCC('cxWorkSw', Number(e.target.value))}>
-                <option value={0}>关闭</option><option value={1}>开启</option>
+                <option value={0}>{'关闭'}</option><option value={1}>{'开启'}</option>
               </select>
             </FormGroup>
             <FormGroup label="考试（CxExamSw）">
               <select className="form-select" value={req.coursesCustom.cxExamSw ?? 1}
                 onChange={e => setCC('cxExamSw', Number(e.target.value))}>
-                <option value={0}>关闭</option><option value={1}>开启</option>
+                <option value={0}>{'关闭'}</option><option value={1}>{'开启'}</option>
               </select>
             </FormGroup>
             <FormGroup label="AI/题库失败后随机答题">
               <select className="form-select" value={req.coursesCustom.randomAnswerOnFail ?? 0}
                 onChange={e => setCC('randomAnswerOnFail', Number(e.target.value))}>
-                <option value={0}>关闭</option><option value={1}>开启</option>
+                <option value={0}>{'关闭'}</option><option value={1}>{'开启'}</option>
               </select>
               <div className="text-muted text-sm" style={{ marginTop: 3 }}>
-                仅在 AI/题库无有效答案时生效；只随机选择题和判断题。
+                {'仅在 AI/题库无有效答案时生效；只随机选择题和判断题。'}
               </div>
             </FormGroup>
           </div>
@@ -270,7 +284,7 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
         </Section>
 
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>取消</button>
+          <button className="btn btn-ghost" onClick={onClose}>{'取消'}</button>
           <button className="btn btn-primary" onClick={onSave} disabled={saving}>
             {saving ? '保存中…' : '保存'}
           </button>

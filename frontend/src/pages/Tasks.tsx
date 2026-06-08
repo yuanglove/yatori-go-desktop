@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
+import { Play, Square } from 'lucide-react'
 import { api, onAnyLog } from '../lib/api'
 import type { AccountVO, TaskStatus } from '../lib/api'
 
 type UIState = 'idle' | 'running' | 'stopping' | 'stopped' | 'failed'
 
 function stateBadge(s: UIState) {
-  if (s === 'running')  return <span className="badge badge-running">运行中</span>
-  if (s === 'stopping') return <span className="badge badge-config">停止中…</span>
-  if (s === 'failed')   return <span className="badge badge-failed">失败</span>
-  if (s === 'stopped')  return <span className="badge badge-stopped">已停止</span>
-  return <span className="badge badge-stopped">未启动</span>
+  if (s === 'running')  return <span className="badge badge-running">{'运行中'}</span>
+  if (s === 'stopping') return <span className="badge badge-config">{'停止中…'}</span>
+  if (s === 'failed')   return <span className="badge badge-failed">{'失败'}</span>
+  if (s === 'stopped')  return <span className="badge badge-stopped">{'已停止'}</span>
+  return <span className="badge badge-stopped">{'未启动'}</span>
 }
 
 export default function TasksPage() {
@@ -81,26 +82,25 @@ export default function TasksPage() {
     await api.stopTask(uid)
   }
 
-  if (loading) return <div className="page"><span className="text-muted" style={{ fontSize: 13 }}>加载中…</span></div>
+  if (loading) return <div className="page"><span className="text-muted" style={{ fontSize: 13 }}>{'加载中…'}</span></div>
 
   return (
     <div className="page">
-      <div className="page-title">任务控制</div>
+      <div className="page-title">{'任务控制'}</div>
 
       <div className="alert alert-info" style={{ marginBottom: 16 }}>
-        学习通 GUI 模式支持：登录、启动、停止、课程过滤、普通/多课程/多任务点模式。
-        CxNode 控制同一账号内同时进行的视频任务点数量；全局最大任务数控制同时运行的账号数量。
+        {'学习通 GUI 模式支持：登录、启动、停止、课程过滤、普通/多课程/多任务点模式。CxNode 控制同一账号内同时进行的视频任务点数量；全局最大任务数控制同时运行的账号数量。'}
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <table className="table">
           <thead>
             <tr>
-              <th>账号</th>
-              <th>平台</th>
-              <th>状态</th>
-              <th>最近日志</th>
-              <th>操作</th>
+              <th>{'账号'}</th>
+              <th>{'平台'}</th>
+              <th>{'状态'}</th>
+              <th>{'最近日志'}</th>
+              <th>{'操作'}</th>
             </tr>
           </thead>
           <tbody>
@@ -125,15 +125,19 @@ export default function TasksPage() {
                   <td>
                     <div className="flex-row">
                       {!noCtrl && !isRunning && !isStopping && (
-                        <button className="btn btn-primary btn-sm" onClick={() => start(a.uid)}>启动</button>
+                        <button className="btn btn-primary btn-sm" onClick={() => start(a.uid)}>
+                          <Play size={13} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                          {'启动'}
+                        </button>
                       )}
                       {noCtrl && !isRunning && !isStopping && (
-                        <span className="text-muted text-sm" title={`${a.accountType} 暂不支持单账号 GUI 控制`}>暂不支持</span>
+                        <span className="text-muted text-sm" title={a.accountType + ' 暂不支持单账号 GUI 控制'}>{'暂不支持'}</span>
                       )}
                       {(isRunning || isStopping) && (
                         <button className="btn btn-danger btn-sm"
                           disabled={isStopping}
                           onClick={() => stop(a.uid)}>
+                          <Square size={12} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
                           {isStopping ? '停止中…' : '停止'}
                         </button>
                       )}
@@ -145,7 +149,7 @@ export default function TasksPage() {
             {accounts.length === 0 && (
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: '32px 24px', color: 'var(--text3)' }}>
-                  请先在"账号管理"添加账号
+                  {'请先在"账号管理"添加账号'}
                 </td>
               </tr>
             )}

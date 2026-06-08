@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Eye, EyeOff, Upload, Download, FolderOpen, Save, Zap } from 'lucide-react'
 import { api } from '../lib/api'
 import type { AppConfig } from '../lib/api'
 import { FormGroup, Section, Spinner } from '../components/shared'
@@ -84,17 +85,27 @@ export default function SettingsPage() {
   return (
     <div className="page">
       <div className="flex-between" style={{ marginBottom: 18 }}>
-        <div className="page-title" style={{ marginBottom: 0 }}>全局设置</div>
+        <div className="page-title" style={{ marginBottom: 0 }}>{'全局设置'}</div>
         <div className="flex-row">
           {msgText && (
             <span style={{ fontSize: 12, color: msgOk ? 'var(--success)' : 'var(--danger)' }}>
               {msgText}
             </span>
           )}
-          <button className="btn btn-ghost btn-sm" onClick={importCfg}>导入配置</button>
-          <button className="btn btn-ghost btn-sm" onClick={exportCfg}>导出配置</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => api.openDataDir()}>数据目录</button>
+          <button className="btn btn-ghost btn-sm" onClick={importCfg}>
+            <Upload size={13} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+            {'导入配置'}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={exportCfg}>
+            <Download size={13} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+            {'导出配置'}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => api.openDataDir()}>
+            <FolderOpen size={13} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+            {'数据目录'}
+          </button>
           <button className="btn btn-primary" onClick={save} disabled={saving}>
+            <Save size={13} strokeWidth={2} style={{ marginRight: 5, verticalAlign: 'middle' }} />
             {saving ? '保存中…' : '保存'}
           </button>
         </div>
@@ -109,20 +120,20 @@ export default function SettingsPage() {
           </FormGroup>
           <FormGroup label="完成提示音">
             <select className="form-select" value={cfg.setting.basicSetting.completionTone} onChange={e => setBasic('completionTone', Number(e.target.value))}>
-              <option value={0}>关闭</option>
-              <option value={1}>开启</option>
+              <option value={0}>{'关闭'}</option>
+              <option value={1}>{'开启'}</option>
             </select>
           </FormGroup>
           <FormGroup label="彩色日志">
             <select className="form-select" value={cfg.setting.basicSetting.colorLog} onChange={e => setBasic('colorLog', Number(e.target.value))}>
-              <option value={0}>关闭</option>
-              <option value={1}>开启</option>
+              <option value={0}>{'关闭'}</option>
+              <option value={1}>{'开启'}</option>
             </select>
           </FormGroup>
           <FormGroup label="输出日志文件">
             <select className="form-select" value={cfg.setting.basicSetting.logOutFileSw} onChange={e => setBasic('logOutFileSw', Number(e.target.value))}>
-              <option value={0}>关闭</option>
-              <option value={1}>开启</option>
+              <option value={0}>{'关闭'}</option>
+              <option value={1}>{'开启'}</option>
             </select>
           </FormGroup>
           <FormGroup label="日志等级">
@@ -132,8 +143,8 @@ export default function SettingsPage() {
           </FormGroup>
           <FormGroup label="日志模式">
             <select className="form-select" value={cfg.setting.basicSetting.logModel} onChange={e => setBasic('logModel', Number(e.target.value))}>
-              <option value={0}>以视频提交为基准</option>
-              <option value={1}>以课程为基准</option>
+              <option value={0}>{'以视频提交为基准'}</option>
+              <option value={1}>{'以课程为基准'}</option>
             </select>
           </FormGroup>
         </div>
@@ -141,10 +152,10 @@ export default function SettingsPage() {
 
       <Section title="任务并发">
         <div className="alert alert-info" style={{ marginBottom: 12 }}>
-          控制桌面端最多同时运行的账号任务数量。超过上限时新任务会被拒绝启动。
+          {'控制桌面端最多同时运行的账号任务数量。超过上限时新任务会被拒绝启动。'}
         </div>
         <div style={{ maxWidth: 240 }}>
-          <FormGroup label="最大同时运行任务数 (1–10)">
+          <FormGroup label="最大同时运行任务数 (1-10)">
             <input
               className="form-input"
               type="number" min={1} max={10} step={1}
@@ -157,6 +168,7 @@ export default function SettingsPage() {
 
       <Section title="AI 设置" action={
         <button className="btn btn-ghost btn-sm" onClick={testAI} disabled={testing}>
+          <Zap size={13} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
           {testing ? '测试中…' : '测试连接'}
         </button>
       }>
@@ -178,7 +190,7 @@ export default function SettingsPage() {
             <input className="form-input" value={cfg.setting.aiSetting.aiUrl} onChange={e => setAI('aiUrl', e.target.value)} />
             {siliconUrlLooksWrong && (
               <div className="alert alert-warn" style={{ marginTop: 6, fontSize: 12 }}>
-                cloud.siliconflow.cn 是控制台，不是 API 地址。可填 https://api.siliconflow.cn/v1/chat/completions
+                {'cloud.siliconflow.cn 是控制台，不是 API 地址。可填 https://api.siliconflow.cn/v1/chat/completions'}
               </div>
             )}
           </FormGroup>
@@ -186,12 +198,12 @@ export default function SettingsPage() {
             <div className="flex-row">
               <input className="form-input" type={showApiKey ? 'text' : 'password'} value={cfg.setting.aiSetting.apiKey} onChange={e => setAI('apiKey', e.target.value)} />
               <button className="btn btn-ghost btn-sm" style={{ flexShrink: 0 }} onClick={() => setShowApiKey(v => !v)}>
-                {showApiKey ? '隐藏' : '显示'}
+                {showApiKey ? <EyeOff size={14} strokeWidth={2} /> : <Eye size={14} strokeWidth={2} />}
               </button>
             </div>
             {apiKeyLooksLikeModel && (
               <div className="alert alert-warn" style={{ marginTop: 6, fontSize: 12 }}>
-                API Key 看起来像模型名，请检查填写位置。
+                {'API Key 看起来像模型名，请检查填写位置。'}
               </div>
             )}
           </FormGroup>
@@ -211,8 +223,8 @@ export default function SettingsPage() {
         <div className="form-row form-row-3">
           <FormGroup label="开关">
             <select className="form-select" value={cfg.setting.emailInform.sw} onChange={e => setEmail('sw', Number(e.target.value))}>
-              <option value={0}>关闭</option>
-              <option value={1}>开启</option>
+              <option value={0}>{'关闭'}</option>
+              <option value={1}>{'开启'}</option>
             </select>
           </FormGroup>
           <FormGroup label="SMTP Host">
@@ -228,7 +240,7 @@ export default function SettingsPage() {
             <div className="flex-row">
               <input className="form-input" type={showEmailPwd ? 'text' : 'password'} value={cfg.setting.emailInform.password} onChange={e => setEmail('password', e.target.value)} />
               <button className="btn btn-ghost btn-sm" style={{ flexShrink: 0 }} onClick={() => setShowEmailPwd(v => !v)}>
-                {showEmailPwd ? '隐藏' : '显示'}
+                {showEmailPwd ? <EyeOff size={14} strokeWidth={2} /> : <Eye size={14} strokeWidth={2} />}
               </button>
             </div>
           </FormGroup>

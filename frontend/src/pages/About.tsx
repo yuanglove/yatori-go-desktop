@@ -1,7 +1,20 @@
 import { useState } from 'react'
+import {
+  ExternalLink, FolderOpen, RefreshCw, ArrowUpCircle,
+  GitBranch, Shield, Layers, Cpu, Bell, Database
+} from 'lucide-react'
 import { OpenDataDir, OpenURL } from '../../wailsjs/go/main/App'
 import { APP_VERSION, PROJECT_RELEASES_URL, PROJECT_REPO_URL, SOURCE_REPO_URL } from '../lib/version'
 import { checkForUpdates } from '../lib/update'
+
+const FEATURES = [
+  { icon: Layers,    title: 'GUI',                desc: 'Wails v2 + React + TypeScript Windows desktop' },
+  { icon: Cpu,       title: 'Go core',            desc: 'yatori-go-console Go core, zero rewrite' },
+  { icon: Database,  title: '账号管理',            desc: '多平台账号增删改，字段级课程自定义配置' },
+  { icon: Bell,      title: '任务控制',            desc: 'worker 子进程运行，支持硬停止，实时日志流' },
+  { icon: Shield,    title: '配置持久化',          desc: '主题、设置和日志统一保存到数据目录' },
+  { icon: RefreshCw, title: '版本检测',            desc: 'GitHub Release 自动检测并通知更新' },
+]
 
 export default function About() {
   const [checking, setChecking] = useState(false)
@@ -15,84 +28,133 @@ export default function About() {
     try {
       const info = await checkForUpdates()
       if (info.hasUpdate) {
-        setUpdateText(`发现新版本 v${info.latestVersion}，当前版本 v${info.currentVersion}`)
+        setUpdateText('发现新版本 v' + info.latestVersion + '（当前 v' + info.currentVersion + '）')
         setUpdateUrl(info.url || PROJECT_RELEASES_URL)
       } else {
-        setUpdateText(`当前已是最新版本 v${info.currentVersion}`)
+        setUpdateText('当前已是最新版本 v' + info.currentVersion)
       }
     } catch (err) {
-      setUpdateText(`检测失败：${err instanceof Error ? err.message : String(err)}`)
+      setUpdateText('检测失败：' + (err instanceof Error ? err.message : String(err)))
     } finally {
       setChecking(false)
     }
   }
 
+  const shortRepo = PROJECT_REPO_URL.replace('https://github.com/', '')
+
   return (
-    <div className="page" style={{ maxWidth: 720 }}>
-      <div className="page-title">关于本项目</div>
+    <div className="page about-page">
 
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
-          <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--accent)' }}>
-            Yatori Go Desktop
-          </span>
-          <span className="badge badge-full">v{APP_VERSION}</span>
+      <div className="about-header card">
+        <div className="about-header-top">
+          <span className="about-project-name">{'Yatori Go Desktop'}</span>
+          <span className="badge badge-running about-version-badge">{'v' + APP_VERSION}</span>
         </div>
-        <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>
-          基于 yatori-go-console 改造的 Windows 桌面版学习管理工具
+        <p className="about-desc">
+          {'基于 yatori-go-console 改造的 Windows 桌面版学习管理工具'}
+        </p>
+        <div className="about-actions">
+          <button className="btn btn-ghost btn-sm" onClick={() => open(SOURCE_REPO_URL)}>
+            <GitBranch size={13} strokeWidth={2} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+            {'原项目'}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => open(PROJECT_REPO_URL)}>
+            <GitBranch size={13} strokeWidth={2} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+            {'本项目仓库'}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => open(PROJECT_RELEASES_URL)}>
+            <ExternalLink size={13} strokeWidth={2} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+            {'更新日志'}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={openData}>
+            <FolderOpen size={13} strokeWidth={2} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+            {'打开数据目录'}
+          </button>
         </div>
+      </div>
 
-        {updateText && (
-          <div className={updateUrl ? 'alert alert-info' : 'alert alert-warn'} style={{ marginBottom: 12 }}>
-            {updateText}
+      <div className="card about-version-card">
+        <div className="about-version-row">
+          <div>
+            <div className="about-section-label">{'当前版本'}</div>
+            <div className="about-version-num">{'v' + APP_VERSION}</div>
+          </div>
+          <div className="about-version-actions">
+            <button className="btn btn-primary btn-sm" onClick={checkUpdate} disabled={checking}>
+              <RefreshCw size={13} strokeWidth={2} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+              {checking ? '检测中…' : '检测新版本'}
+            </button>
             {updateUrl && (
-              <button className="btn btn-primary btn-sm" style={{ marginLeft: 12 }} onClick={() => open(updateUrl)}>
-                去更新
+              <button className="btn btn-primary btn-sm" onClick={() => open(updateUrl)}>
+                <ArrowUpCircle size={13} strokeWidth={2} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+                {'去更新'}
               </button>
             )}
           </div>
+        </div>
+        {updateText && (
+          <div className={updateUrl ? 'alert alert-info' : 'alert alert-warn'} style={{ marginTop: 10 }}>
+            {updateText}
+          </div>
         )}
+      </div>
 
-        <div className="flex-row" style={{ flexWrap: 'wrap', gap: 8 }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => open(SOURCE_REPO_URL)}>原项目</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => open(PROJECT_REPO_URL)}>本项目仓库</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => open(PROJECT_RELEASES_URL)}>更新日志</button>
-          <button className="btn btn-primary btn-sm" onClick={checkUpdate} disabled={checking}>
-            {checking ? '检测中…' : '检测新版本'}
+      <div className="card">
+        <div className="card-title">{'本项目做了什么'}</div>
+        <div className="about-feature-grid">
+          {FEATURES.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="about-feature-item">
+              <span className="about-feature-icon">
+                <Icon size={15} strokeWidth={1.75} />
+              </span>
+              <div>
+                <div className="about-feature-title">{title}</div>
+                <div className="about-feature-desc">{desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-title">{'项目来源'}</div>
+        <div className="about-source-list">
+          <div className="about-source-item">
+            <span className="about-source-label">{'原项目'}</span>
+            <a href="#" className="about-source-link" onClick={e => { e.preventDefault(); open(SOURCE_REPO_URL) }}>
+              {'yatori-dev/yatori-go-console'}
+              <ExternalLink size={12} strokeWidth={2} style={{ marginLeft: 4, verticalAlign: 'middle', opacity: 0.7 }} />
+            </a>
+          </div>
+          <div className="about-source-item">
+            <span className="about-source-label">{'本项目'}</span>
+            <a href="#" className="about-source-link" onClick={e => { e.preventDefault(); open(PROJECT_REPO_URL) }}>
+              {shortRepo}
+              <ExternalLink size={12} strokeWidth={2} style={{ marginLeft: 4, verticalAlign: 'middle', opacity: 0.7 }} />
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div className="card about-data-card">
+        <div className="card-title" style={{ marginBottom: 8 }}>{'数据目录'}</div>
+        <div className="about-data-row">
+          <code className="about-path-chip">{'%APPDATA%\\yatori-go-console'}</code>
+          <button className="btn btn-ghost btn-sm" onClick={openData}>
+            <FolderOpen size={13} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+            {'打开'}
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={openData}>打开数据目录</button>
+        </div>
+        <div className="text-muted text-sm" style={{ marginTop: 6 }}>
+          {'配置文件、数据库和日志均保存于此目录'}
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-title">项目来源</div>
-        <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7 }}>
-          本项目基于 <strong style={{ color: 'var(--text)' }}>yatori-dev/yatori-go-console</strong> 改造。<br />
-          原项目：<a href="#" style={{ color: 'var(--accent)' }} onClick={e => { e.preventDefault(); open(SOURCE_REPO_URL) }}>{SOURCE_REPO_URL}</a><br />
-          本项目：<a href="#" style={{ color: 'var(--accent)' }} onClick={e => { e.preventDefault(); open(PROJECT_REPO_URL) }}>{PROJECT_REPO_URL}</a>
-        </div>
+      <div className="alert alert-info about-security">
+        <Shield size={14} strokeWidth={2} style={{ marginRight: 6, verticalAlign: 'middle', flexShrink: 0 }} />
+        <span>{'本项目仅用于个人已授权账号的学习任务管理，不提供验证码破解、人脸绕过或考试作弊能力。'}</span>
       </div>
 
-      <div className="card">
-        <div className="card-title">本项目做了什么</div>
-        <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.8 }}>
-          使用 Wails v2 + React + TypeScript 构建 Windows 桌面界面，复用 yatori-go-console 的核心 Go 逻辑。
-          增加账号管理、任务控制、日志中心、全局设置和课程进度页面。
-          支持 worker 子进程运行任务并支持硬停止，支持多套主题保存到 config.yaml，
-          增加 GitHub 自动版本检测。配置、数据库和日志统一保存到
-          <code style={{ background: 'var(--bg3)', padding: '1px 6px', borderRadius: 4, margin: '0 4px', fontSize: 12 }}>
-            %APPDATA%\yatori-go-console
-          </code>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-title">安全声明</div>
-        <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7 }}>
-          本项目仅用于个人已授权账号的学习任务管理。<br />
-          不提供验证码破解、人脸绕过、考试作弊等能力。
-        </div>
-      </div>
     </div>
   )
 }
