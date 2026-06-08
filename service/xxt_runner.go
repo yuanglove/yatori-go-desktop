@@ -124,19 +124,19 @@ func SafeRun(ctx context.Context, setting consoleConfig.Setting,
 		// 排除课程（按名称精确匹配）
 		if len(user.CoursesCustom.ExcludeCourses) > 0 &&
 			consoleConfig.CmpCourse(course.CourseName, user.CoursesCustom.ExcludeCourses) {
-			sysLog("课程 [%s] 在排除列表，跳过", course.CourseName)
+			// 只统计过滤结果，避免启动时大量跳过日志刷屏。
 			excluded++
 			continue
 		}
 		// 包含课程（按名称精确匹配；为空则全部学）
 		if len(user.CoursesCustom.IncludeCourses) > 0 &&
 			!consoleConfig.CmpCourse(course.CourseName, user.CoursesCustom.IncludeCourses) {
-			sysLog("课程 [%s] 不在包含列表，跳过", course.CourseName)
+			// 只统计过滤结果，避免启动时大量跳过日志刷屏。
 			skipped++
 			continue
 		}
 		if !course.IsStart {
-			sysLog("课程 [%s] 还未开课，跳过", course.CourseName)
+			// 只统计过滤结果，避免启动时大量跳过日志刷屏。
 			skipped++
 			continue
 		}
@@ -171,7 +171,6 @@ func safeRunCourse(ctx context.Context, setting consoleConfig.Setting,
 		return
 	}
 	if course.State == 1 {
-		emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, "", "", "课程已结束，跳过"))
 		return
 	}
 
@@ -199,7 +198,6 @@ func safeRunChapter(ctx context.Context, setting consoleConfig.Setting,
 	action, _, err := xuexitong.PullCourseChapterAction(cache, course.Cpi, key)
 	if err != nil {
 		if strings.Contains(err.Error(), "课程章节为空") {
-			emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, "", "", "课程章节为空，跳过"))
 			return nil
 		}
 		return fmt.Errorf("拉取章节信息失败: %w", err)
@@ -212,7 +210,7 @@ func safeRunChapter(ctx context.Context, setting consoleConfig.Setting,
 		})
 	}
 
-	emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, "", "", fmt.Sprintf("获取课程章节成功（共 %d 个）", len(action.Knowledge))))
+	// 章节数量只用于内部判断，不逐课程输出，避免启动时刷屏。
 
 	var nodes []int
 	for _, item := range action.Knowledge {
@@ -239,7 +237,7 @@ func safeRunChapter(ctx context.Context, setting consoleConfig.Setting,
 		return i.PointTotal >= 0 && i.PointTotal == i.PointFinished
 	}
 
-	emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, "", "", "正在学习该课程"))
+	// 具体进度由视频提交日志体现。
 
 	if user.CoursesCustom.VideoModel == 3 && len(model3Caches) > 0 {
 		// 多任务点并发，用 nodeSem 控制并发
@@ -249,8 +247,7 @@ func safeRunChapter(ctx context.Context, setting consoleConfig.Setting,
 				break
 			}
 			if isFinished(index) {
-				tp := formatTaskPoint(pointAction.Knowledge[index])
-				emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, tp, "", "任务点已完成，跳过"))
+				// 已完成任务点只跳过，不逐条输出。
 				continue
 			}
 			nodeLock.Add(1)
@@ -273,8 +270,7 @@ func safeRunChapter(ctx context.Context, setting consoleConfig.Setting,
 				break
 			}
 			if isFinished(index) {
-				tp := formatTaskPoint(pointAction.Knowledge[index])
-				emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, tp, "", "任务点已完成，跳过"))
+				// 已完成任务点只跳过，不逐条输出。
 				continue
 			}
 			safeRunNode(ctx, setting, user, cache, course, pointAction, action, nodes, index, key, courseId, nodeSem, nodeSemMu, nodeSemUsed, submitThreshold, randomAnswerOnFail, emit)
@@ -320,7 +316,6 @@ func safeRunNode(ctx context.Context, setting consoleConfig.Setting,
 
 	if videoDTOs == nil && workDTOs == nil && documentDTOs == nil &&
 		hyperlinkDTOs == nil && liveDTOs == nil && bbsDTOs == nil {
-		xlog(tp, "", "无任何任务节点，跳过")
 		return
 	}
 
@@ -330,20 +325,14 @@ func safeRunNode(ctx context.Context, setting consoleConfig.Setting,
 		nodeSem <- struct{}{}
 		nodeSemMu.Lock()
 		(*nodeSemUsed)++
-		used := *nodeSemUsed
-		total := cap(nodeSem)
 		nodeSemMu.Unlock()
-		xlog(tp, "", fmt.Sprintf("开始视频任务，占用并发槽 %d/%d", used, total))
 		defer func() {
 			<-nodeSem
 			nodeSemMu.Lock()
 			if *nodeSemUsed > 0 {
-				*nodeSemUsed--
+				(*nodeSemUsed)--
 			}
-			used := *nodeSemUsed
-			total := cap(nodeSem)
 			nodeSemMu.Unlock()
-			xlog(tp, "", fmt.Sprintf("视频任务结束，释放并发槽，当前 %d/%d", used, total))
 		}()
 		for _, v := range videoDTOs {
 			if ctx.Err() != nil {
@@ -410,9 +399,9 @@ func safeRunNode(ctx context.Context, setting consoleConfig.Setting,
 	if workDTOs == nil {
 		// 无章节测验，静默跳过
 	} else if user.CoursesCustom.AutoExam == 0 {
-		xlog(tp, "", "自动答题关闭，跳过章节测验")
+		// 自动答题关闭时不逐条输出章节测验跳过日志。
 	} else if cxChapterSw == 0 {
-		xlog(tp, "", "章节测验开关关闭，跳过")
+		// 章节测验关闭时不逐条输出跳过日志。
 	} else {
 		xlog(tp, "", fmt.Sprintf("检测到章节测验，共 %d 个", len(workDTOs)))
 		for _, wd := range workDTOs {
@@ -444,12 +433,10 @@ func safeRunNode(ctx context.Context, setting consoleConfig.Setting,
 				continue
 			}
 			if !flag {
-				xlog(tp, qa.Title, "章节测验已完成，跳过")
 				continue
 			}
 			hasQ := len(qa.Short) + len(qa.Choice) + len(qa.Judge) + len(qa.Fill) + len(qa.TermExplanation) + len(qa.Essay)
 			if hasQ == 0 {
-				xlog(tp, qa.Title, "章节测验无题目，跳过")
 				continue
 			}
 			safeChapterTestAction(ctx, setting, user, cache, course, curKnowledge, qa, submitThreshold, randomAnswerOnFail, emit)
@@ -556,11 +543,7 @@ func safeRunWorkAndExam(ctx context.Context, setting consoleConfig.Setting,
 		emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, "", item, msg))
 	}
 
-	xlog("", fmt.Sprintf("开始检查课程作业/考试（CxWorkSw=%d CxExamSw=%d AutoExam=%d ExamAutoSubmit=%d）",
-		cxWork, cxExam, user.CoursesCustom.AutoExam, user.CoursesCustom.ExamAutoSubmit))
-
 	if user.CoursesCustom.AutoExam == 0 {
-		xlog("", "AutoExam=0，跳过答题")
 		return
 	}
 	if ctx.Err() != nil {
@@ -587,8 +570,6 @@ func safeRunWorkAndExam(ctx context.Context, setting consoleConfig.Setting,
 		if err != nil {
 			xlog("", "拉取作业列表失败，跳过: "+err.Error())
 		} else {
-			xlog("", fmt.Sprintf("拉取作业数量：%d", len(workList)))
-			found := 0
 			for _, work := range workList {
 				if ctx.Err() != nil {
 					return
@@ -596,16 +577,12 @@ func safeRunWorkAndExam(ctx context.Context, setting consoleConfig.Setting,
 				if !(work.Status == "待做" || work.Status == "未交" || work.Status == "待重做") {
 					continue
 				}
-				found++
 				xlog(work.Name, "检测到待做作业")
 				if err2 := xuexitong.EnterWorkAction(cache, &work); err2 != nil {
 					xlog(work.Name, "进入作业失败: "+err2.Error())
 					continue
 				}
 				safeWorkAction(ctx, setting, user, cache, course, work, emit)
-			}
-			if found == 0 {
-				xlog("", "未检测到待做作业")
 			}
 		}
 	}
@@ -616,8 +593,6 @@ func safeRunWorkAndExam(ctx context.Context, setting consoleConfig.Setting,
 		if err != nil {
 			xlog("", "拉取考试列表失败，跳过: "+err.Error())
 		} else {
-			xlog("", fmt.Sprintf("拉取考试数量：%d", len(examList)))
-			found := 0
 			for _, exam := range examList {
 				if ctx.Err() != nil {
 					return
@@ -625,16 +600,12 @@ func safeRunWorkAndExam(ctx context.Context, setting consoleConfig.Setting,
 				if exam.Status != "待做" && exam.Status != "待重考" {
 					continue
 				}
-				found++
 				xlog(exam.Name, "检测到待做考试")
 				if err2 := xuexitong.EnterExamAction(cache, &exam); err2 != nil {
 					xlog(exam.Name, "进入考试失败: "+err2.Error())
 					continue
 				}
 				safeExamAction(ctx, setting, user, cache, course, exam, emit)
-			}
-			if found == 0 {
-				xlog("", "未检测到待做考试")
 			}
 		}
 	}
