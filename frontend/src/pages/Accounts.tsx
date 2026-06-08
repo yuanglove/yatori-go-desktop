@@ -20,7 +20,7 @@ const emptyReq = (): AccountReq => ({
 })
 
 function guiBadge(g: string) {
-  if (g === 'full') return <span className="badge badge-full">完整支持</span>
+  if (g === 'full')        return <span className="badge badge-full">完整支持</span>
   if (g === 'config-only') return <span className="badge badge-config">仅配置</span>
   return <span className="badge badge-none">暂不支持</span>
 }
@@ -35,9 +35,12 @@ export default function AccountsPage() {
   const openAdd = () => { setErr(''); setEditing(emptyReq()) }
   const openEdit = (a: AccountVO) => {
     setErr('')
-    setEditing({ uid: a.uid, accountType: a.accountType, url: a.url, remarkName: a.remarkName ?? '',
-      account: a.account, password: '', isProxy: a.isProxy, informEmails: a.informEmails,
-      coursesCustom: a.coursesCustom })
+    setEditing({
+      uid: a.uid, accountType: a.accountType, url: a.url,
+      remarkName: a.remarkName ?? '', account: a.account,
+      password: '', isProxy: a.isProxy, informEmails: a.informEmails,
+      coursesCustom: a.coursesCustom,
+    })
   }
 
   const handleSave = async () => {
@@ -59,12 +62,13 @@ export default function AccountsPage() {
 
   return (
     <div className="page">
-      <div className="flex-between" style={{ marginBottom: 16 }}>
+      <div className="flex-between" style={{ marginBottom: 18 }}>
         <div className="page-title" style={{ marginBottom: 0 }}>账号管理</div>
         <button className="btn btn-primary" onClick={openAdd}>+ 添加账号</button>
       </div>
+
       {loading ? <Spinner /> : (
-        <div className="card" style={{ padding: 0 }}>
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <table className="table">
             <thead>
               <tr>
@@ -75,9 +79,9 @@ export default function AccountsPage() {
               {(accounts ?? []).map(a => (
                 <tr key={a.uid}>
                   <td><span className="badge badge-config">{a.accountType}</span></td>
-                  <td>{a.account}</td>
+                  <td style={{ fontWeight: 500 }}>{a.account}</td>
                   <td className="text-muted">{a.remarkName || '—'}</td>
-                  <td>{a.isProxy ? '是' : '否'}</td>
+                  <td className="text-muted">{a.isProxy ? '是' : '否'}</td>
                   <td>{guiBadge(a.guiSupport)}</td>
                   <td>
                     <div className="flex-row">
@@ -88,7 +92,7 @@ export default function AccountsPage() {
                 </tr>
               ))}
               {(accounts ?? []).length === 0 && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--text2)' }}>
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px 24px', color: 'var(--text3)' }}>
                   暂无账号，点击"添加账号"开始
                 </td></tr>
               )}
@@ -97,21 +101,21 @@ export default function AccountsPage() {
         </div>
       )}
 
-      {editing && <AccountModal req={editing} onChange={setEditing}
-        onSave={handleSave} onClose={() => setEditing(null)} saving={saving} error={err} />}
-      {delUid && <Confirm msg="确认删除该账号？运行中的任务将被停止。"
-        onOk={handleDelete} onCancel={() => setDelUid('')} />}
+      {editing && (
+        <AccountModal req={editing} onChange={setEditing}
+          onSave={handleSave} onClose={() => setEditing(null)} saving={saving} error={err} />
+      )}
+      {delUid && (
+        <Confirm msg="确认删除该账号？运行中的任务将被停止。"
+          onOk={handleDelete} onCancel={() => setDelUid('')} />
+      )}
     </div>
   )
 }
 
 function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
-  req: AccountReq
-  onChange(r: AccountReq): void
-  onSave(): void
-  onClose(): void
-  saving: boolean
-  error: string
+  req: AccountReq; onChange(r: AccountReq): void
+  onSave(): void; onClose(): void; saving: boolean; error: string
 }) {
   const set = (k: keyof AccountReq, v: unknown) => onChange({ ...req, [k]: v })
   const setCC = (k: keyof CoursesCustom, v: unknown) =>
@@ -121,7 +125,7 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
     <div className="modal-overlay">
       <div className="modal">
         <div className="modal-title">{req.uid ? '编辑账号' : '添加账号'}</div>
-        {error && <div className="alert alert-warn">{error}</div>}
+        {error && <div className="alert alert-warn" style={{ marginBottom: 14 }}>{error}</div>}
 
         <Section title="基本信息">
           <div className="form-row form-row-2">
@@ -136,20 +140,15 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 placeholder={req.accountType === 'YINGHUA' ? '必填，如 https://xxx.yinghuaxuetang.com' : '部分平台必填'}
                 onChange={e => set('url', e.target.value)} />
             </FormGroup>
-          </div>
-          <div className="form-row form-row-2">
             <FormGroup label="账号 *">
               <input className="form-input" value={req.account}
                 onChange={e => set('account', e.target.value)} />
             </FormGroup>
-            <FormGroup label={req.uid ? '密码（留空则保留原密码）' : '密码 *'}>
+            <FormGroup label={req.uid ? '密码（留空保留原密码）' : '密码 *'}>
               <input className="form-input" type="password" value={req.password}
                 placeholder={req.uid ? '已保存密码，留空不修改' : ''}
                 onChange={e => set('password', e.target.value)} />
-              {req.uid && <div className="text-muted text-sm" style={{marginTop:3}}>当前账号已有本地保存的密码</div>}
             </FormGroup>
-          </div>
-          <div className="form-row form-row-2">
             <FormGroup label="备注名">
               <input className="form-input" value={req.remarkName}
                 onChange={e => set('remarkName', e.target.value)} />
@@ -170,8 +169,8 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
 
         <Section title="课程自定义">
           {req.accountType === 'XUEXITONG' && (
-            <div className="alert alert-warn" style={{marginBottom:10}}>
-              GUI 启动支持普通/多课程/多任务点模式。CxNode 控制同一账号内同时进行的视频任务点数量；全局最大任务数只控制同时运行的账号数量。
+            <div className="alert alert-info" style={{ marginBottom: 12 }}>
+              CxNode 控制同一账号内同时进行的视频任务点数量；全局最大任务数只控制同时运行的账号数量。
             </div>
           )}
           <div className="form-row form-row-3">
@@ -197,33 +196,20 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 onChange={e => setCC('examAutoSubmit', Number(e.target.value))}>
                 <option value={0}>0 不提交</option>
                 <option value={1}>1 提交</option>
-                <option value={2}>2 智能提交（有空题时仅保存）</option>
+                <option value={2}>2 智能提交</option>
               </select>
             </FormGroup>
             {req.coursesCustom.examAutoSubmit === 2 && (
               <FormGroup label="智能提交阈值 (%)">
-                <input className="form-input" type="number" min={1} max={100} step={1}
-                  value={!req.coursesCustom.submitThresholdPercent || req.coursesCustom.submitThresholdPercent <= 0 ? 100 : req.coursesCustom.submitThresholdPercent}
+                <input className="form-input" type="number" min={1} max={100}
+                  value={!req.coursesCustom.submitThresholdPercent || req.coursesCustom.submitThresholdPercent <= 0
+                    ? 100 : req.coursesCustom.submitThresholdPercent}
                   onChange={e => setCC('submitThresholdPercent', Math.min(100, Math.max(1, Number(e.target.value))))} />
-                <div className="text-muted text-sm" style={{marginTop:3}}>
-                  已答题数量达到总题数该百分比时提交（1-100）；未达到则只保存。100=全部答完才提交。
+                <div className="text-muted text-sm" style={{ marginTop: 3 }}>
+                  已答题数量达到总题数该百分比时提交；未达到则只保存。
                 </div>
               </FormGroup>
             )}
-          </div>
-          <div className="form-row form-row-2">
-            <FormGroup label="包含课程（逗号分隔，空=全部）">
-              <input className="form-input"
-                value={(req.coursesCustom.includeCourses ?? []).join(',')}
-                onChange={e => setCC('includeCourses', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
-            </FormGroup>
-            <FormGroup label="排除课程（逗号分隔）">
-              <input className="form-input"
-                value={(req.coursesCustom.excludeCourses ?? []).join(',')}
-                onChange={e => setCC('excludeCourses', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
-            </FormGroup>
-          </div>
-          <div className="form-row form-row-2">
             <FormGroup label="打乱顺序">
               <select className="form-select" value={req.coursesCustom.shuffleSw}
                 onChange={e => setCC('shuffleSw', Number(e.target.value))}>
@@ -235,39 +221,50 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 value={req.coursesCustom.studyTime ?? ''}
                 onChange={e => setCC('studyTime', e.target.value)} />
             </FormGroup>
-            <FormGroup label="学习通同时任务点数（CxNode）">
+            <FormGroup label="CxNode（同时任务点数）">
               <input className="form-input" type="number" min={1} max={20}
-                placeholder="默认 3，-1=全并发"
+                placeholder="默认 3"
                 value={req.coursesCustom.cxNode ?? 3}
                 onChange={e => setCC('cxNode', Number(e.target.value))} />
-              <div className="text-muted text-sm" style={{marginTop:3}}>
-                控制同时进行的视频任务点数量，不支持按任务点过滤执行
-              </div>
             </FormGroup>
-            <FormGroup label="章节测验开关（CxChapterTestSw）">
+            <FormGroup label="章节测验（CxChapterTestSw）">
               <select className="form-select" value={req.coursesCustom.cxChapterTestSw ?? 1}
                 onChange={e => setCC('cxChapterTestSw', Number(e.target.value))}>
                 <option value={0}>关闭</option><option value={1}>开启</option>
               </select>
             </FormGroup>
-            <FormGroup label="作业开关（CxWorkSw）">
+            <FormGroup label="作业（CxWorkSw）">
               <select className="form-select" value={req.coursesCustom.cxWorkSw ?? 1}
                 onChange={e => setCC('cxWorkSw', Number(e.target.value))}>
                 <option value={0}>关闭</option><option value={1}>开启</option>
               </select>
             </FormGroup>
-            <FormGroup label="AI/题库失败后随机答选择题/判断题">
-              <select className="form-select" value={req.coursesCustom.randomAnswerOnFail ?? 0}
-                onChange={e => setCC('randomAnswerOnFail', Number(e.target.value))}>
-                <option value={0}>关闭</option><option value={1}>开启</option>
-              </select>
-              <div className="text-muted text-sm" style={{marginTop:3}}>仅在已配置 AI 或题库、但未获取到有效答案时生效；只随机选择题和判断题。</div>
-            </FormGroup>
-            <FormGroup label="考试开关（CxExamSw）">
+            <FormGroup label="考试（CxExamSw）">
               <select className="form-select" value={req.coursesCustom.cxExamSw ?? 1}
                 onChange={e => setCC('cxExamSw', Number(e.target.value))}>
                 <option value={0}>关闭</option><option value={1}>开启</option>
               </select>
+            </FormGroup>
+            <FormGroup label="AI/题库失败后随机答题">
+              <select className="form-select" value={req.coursesCustom.randomAnswerOnFail ?? 0}
+                onChange={e => setCC('randomAnswerOnFail', Number(e.target.value))}>
+                <option value={0}>关闭</option><option value={1}>开启</option>
+              </select>
+              <div className="text-muted text-sm" style={{ marginTop: 3 }}>
+                仅在 AI/题库无有效答案时生效；只随机选择题和判断题。
+              </div>
+            </FormGroup>
+          </div>
+          <div className="form-row form-row-2" style={{ marginTop: 4 }}>
+            <FormGroup label="包含课程（逗号分隔，空=全部）">
+              <input className="form-input"
+                value={(req.coursesCustom.includeCourses ?? []).join(',')}
+                onChange={e => setCC('includeCourses', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+            </FormGroup>
+            <FormGroup label="排除课程（逗号分隔）">
+              <input className="form-input"
+                value={(req.coursesCustom.excludeCourses ?? []).join(',')}
+                onChange={e => setCC('excludeCourses', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
             </FormGroup>
           </div>
         </Section>

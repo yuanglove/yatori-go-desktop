@@ -45,8 +45,7 @@ export default function SettingsPage() {
   }
 
   const save = async () => {
-    setSaving(true)
-    setMsgText('')
+    setSaving(true); setMsgText('')
     const r = await api.saveConfig(cfg)
     setSaving(false)
     setMsgOk(r.ok)
@@ -58,30 +57,22 @@ export default function SettingsPage() {
     const r = await api.importConfig()
     if (r.ok) {
       const plain = JSON.parse(JSON.stringify(r.data)) as AppConfig
-      setCfg(plain)
-      setMsgOk(true)
-      setMsgText('导入成功')
+      setCfg(plain); setMsgOk(true); setMsgText('导入成功')
       applyTheme(plain.setting.basicSetting.theme || 'dark')
     } else if (r.error !== '用户取消') {
-      setMsgOk(false)
-      setMsgText(r.error ?? '导入失败')
+      setMsgOk(false); setMsgText(r.error ?? '导入失败')
     }
   }
 
   const exportCfg = async () => {
     const r = await api.exportConfig(cfg)
-    if (!r.ok && r.error !== '用户取消') {
-      setMsgOk(false)
-      setMsgText(r.error ?? '导出失败')
-    }
+    if (!r.ok && r.error !== '用户取消') { setMsgOk(false); setMsgText(r.error ?? '导出失败') }
   }
 
   const testAI = async () => {
-    setTesting(true)
-    setTestMsg('')
+    setTesting(true); setTestMsg('')
     const r = await api.testAIConfig()
-    setTesting(false)
-    setTestOk(r.ok)
+    setTesting(false); setTestOk(r.ok)
     setTestMsg(r.ok ? String(r.data) : r.error ?? '测试失败')
   }
 
@@ -92,26 +83,28 @@ export default function SettingsPage() {
 
   return (
     <div className="page">
-      <div className="flex-between" style={{ marginBottom: 16 }}>
+      <div className="flex-between" style={{ marginBottom: 18 }}>
         <div className="page-title" style={{ marginBottom: 0 }}>全局设置</div>
         <div className="flex-row">
           {msgText && (
-            <span style={{ fontSize: 13, color: msgOk ? 'var(--success)' : 'var(--danger)' }}>
-              {msgOk ? '通过 ' : '失败 '}{msgText}
+            <span style={{ fontSize: 12, color: msgOk ? 'var(--success)' : 'var(--danger)' }}>
+              {msgText}
             </span>
           )}
-          <button className="btn btn-ghost btn-sm" onClick={importCfg}>导入 config.yaml</button>
-          <button className="btn btn-ghost btn-sm" onClick={exportCfg}>导出 config.yaml</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => api.openDataDir()}>打开数据目录</button>
-          <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? '保存中...' : '保存'}</button>
+          <button className="btn btn-ghost btn-sm" onClick={importCfg}>导入配置</button>
+          <button className="btn btn-ghost btn-sm" onClick={exportCfg}>导出配置</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => api.openDataDir()}>数据目录</button>
+          <button className="btn btn-primary" onClick={save} disabled={saving}>
+            {saving ? '保存中…' : '保存'}
+          </button>
         </div>
       </div>
 
       <Section title="基础设置">
-        <div className="form-row form-row-2">
+        <div className="form-row form-row-3">
           <FormGroup label="界面主题">
             <select className="form-select" value={cfg.setting.basicSetting.theme || 'dark'} onChange={e => setTheme(e.target.value)}>
-              {THEMES.map(theme => <option key={theme.value} value={theme.value}>{theme.label}</option>)}
+              {THEMES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </FormGroup>
           <FormGroup label="完成提示音">
@@ -134,7 +127,7 @@ export default function SettingsPage() {
           </FormGroup>
           <FormGroup label="日志等级">
             <select className="form-select" value={cfg.setting.basicSetting.logLevel} onChange={e => setBasic('logLevel', e.target.value)}>
-              {['INFO', 'DEBUG', 'WARN', 'ERROR'].map(level => <option key={level}>{level}</option>)}
+              {['INFO', 'DEBUG', 'WARN', 'ERROR'].map(l => <option key={l}>{l}</option>)}
             </select>
           </FormGroup>
           <FormGroup label="日志模式">
@@ -148,30 +141,34 @@ export default function SettingsPage() {
 
       <Section title="任务并发">
         <div className="alert alert-info" style={{ marginBottom: 12 }}>
-          控制桌面端最多同时运行几个账号任务。超过上限时，新任务会被拒绝启动；停止或任务结束后会释放名额。
+          控制桌面端最多同时运行的账号任务数量。超过上限时新任务会被拒绝启动。
         </div>
-        <FormGroup label="最大同时运行任务数 (1-10)">
-          <input
-            className="form-input"
-            type="number"
-            min={1}
-            max={10}
-            step={1}
-            value={cfg.setting.basicSetting.maxWorkers ?? 3}
-            onChange={e => {
-              const next = Number(e.target.value || 3)
-              setBasic('maxWorkers', Math.min(10, Math.max(1, next)))
-            }}
-          />
-        </FormGroup>
+        <div style={{ maxWidth: 240 }}>
+          <FormGroup label="最大同时运行任务数 (1–10)">
+            <input
+              className="form-input"
+              type="number" min={1} max={10} step={1}
+              value={cfg.setting.basicSetting.maxWorkers ?? 3}
+              onChange={e => setBasic('maxWorkers', Math.min(10, Math.max(1, Number(e.target.value || 3))))}
+            />
+          </FormGroup>
+        </div>
       </Section>
 
-      <Section title="AI 设置">
-        {testMsg && <div className={testOk ? 'alert alert-info' : 'alert alert-warn'}>{testOk ? '通过 ' : '失败 '}{testMsg}</div>}
+      <Section title="AI 设置" action={
+        <button className="btn btn-ghost btn-sm" onClick={testAI} disabled={testing}>
+          {testing ? '测试中…' : '测试连接'}
+        </button>
+      }>
+        {testMsg && (
+          <div className={testOk ? 'alert alert-info' : 'alert alert-warn'} style={{ marginBottom: 12 }}>
+            {testMsg}
+          </div>
+        )}
         <div className="form-row form-row-2">
           <FormGroup label="AI 类型">
             <select className="form-select" value={cfg.setting.aiSetting.aiType} onChange={e => setAI('aiType', e.target.value)}>
-              {AI_TYPES.map(type => <option key={type}>{type}</option>)}
+              {AI_TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
           </FormGroup>
           <FormGroup label="模型名">
@@ -180,8 +177,8 @@ export default function SettingsPage() {
           <FormGroup label="API 地址">
             <input className="form-input" value={cfg.setting.aiSetting.aiUrl} onChange={e => setAI('aiUrl', e.target.value)} />
             {siliconUrlLooksWrong && (
-              <div className="alert alert-warn" style={{ marginTop: 6 }}>
-                cloud.siliconflow.cn 是控制台地址，不是 API 地址。SILICON 可留空，或填写 https://api.siliconflow.cn/v1/chat/completions
+              <div className="alert alert-warn" style={{ marginTop: 6, fontSize: 12 }}>
+                cloud.siliconflow.cn 是控制台，不是 API 地址。可填 https://api.siliconflow.cn/v1/chat/completions
               </div>
             )}
           </FormGroup>
@@ -193,23 +190,25 @@ export default function SettingsPage() {
               </button>
             </div>
             {apiKeyLooksLikeModel && (
-              <div className="alert alert-warn" style={{ marginTop: 6 }}>API Key 看起来像模型名。模型名填在“模型名”，这里填写平台发放的 API Key。</div>
+              <div className="alert alert-warn" style={{ marginTop: 6, fontSize: 12 }}>
+                API Key 看起来像模型名，请检查填写位置。
+              </div>
             )}
           </FormGroup>
-        </div>
-        <div style={{ marginTop: 8 }}>
-          <button className="btn btn-ghost btn-sm" onClick={testAI} disabled={testing}>{testing ? '测试中...' : '测试 AI 配置'}</button>
         </div>
       </Section>
 
       <Section title="外部题库接口">
-        <FormGroup label="题库接口 URL">
-          <input className="form-input" value={cfg.setting.apiQueSetting.url} onChange={e => setCfg({ ...cfg, setting: { ...cfg.setting, apiQueSetting: { url: e.target.value } } })} />
-        </FormGroup>
+        <div style={{ maxWidth: 400 }}>
+          <FormGroup label="题库接口 URL">
+            <input className="form-input" value={cfg.setting.apiQueSetting.url}
+              onChange={e => setCfg({ ...cfg, setting: { ...cfg.setting, apiQueSetting: { url: e.target.value } } })} />
+          </FormGroup>
+        </div>
       </Section>
 
       <Section title="邮件通知">
-        <div className="form-row form-row-2">
+        <div className="form-row form-row-3">
           <FormGroup label="开关">
             <select className="form-select" value={cfg.setting.emailInform.sw} onChange={e => setEmail('sw', Number(e.target.value))}>
               <option value={0}>关闭</option>
@@ -228,7 +227,9 @@ export default function SettingsPage() {
           <FormGroup label="邮箱密码">
             <div className="flex-row">
               <input className="form-input" type={showEmailPwd ? 'text' : 'password'} value={cfg.setting.emailInform.password} onChange={e => setEmail('password', e.target.value)} />
-              <button className="btn btn-ghost btn-sm" style={{ flexShrink: 0 }} onClick={() => setShowEmailPwd(v => !v)}>{showEmailPwd ? '隐藏' : '显示'}</button>
+              <button className="btn btn-ghost btn-sm" style={{ flexShrink: 0 }} onClick={() => setShowEmailPwd(v => !v)}>
+                {showEmailPwd ? '隐藏' : '显示'}
+              </button>
             </div>
           </FormGroup>
         </div>
