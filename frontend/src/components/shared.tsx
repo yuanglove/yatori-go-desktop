@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, ReactNode } from 'react'
 import { api, onTaskLog } from '../lib/api'
 
-// 匹配所有 DTO 的公共形状（ok + data? + error?）
 interface AnyResult<T = unknown> { ok: boolean; data?: T; error?: string }
 
 export function useAsync<T>(fn: () => Promise<AnyResult<T>>, deps: unknown[] = []) {
@@ -37,9 +36,9 @@ export function useLogStream(uid: string) {
 export function Confirm({ msg, onOk, onCancel }: { msg: string; onOk(): void; onCancel(): void }) {
   return (
     <div className="modal-overlay">
-      <div className="modal" style={{ minWidth: 320 }}>
-        <div className="modal-title">确认</div>
-        <p style={{ marginBottom: 8 }}>{msg}</p>
+      <div className="modal" style={{ minWidth: 340, maxWidth: 420 }}>
+        <div className="modal-title">确认操作</div>
+        <p style={{ color: 'var(--text2)', lineHeight: 1.6 }}>{msg}</p>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onCancel}>取消</button>
           <button className="btn btn-danger" onClick={onOk}>确认</button>
@@ -49,14 +48,30 @@ export function Confirm({ msg, onOk, onCancel }: { msg: string; onOk(): void; on
   )
 }
 
-export function Spinner() {
-  return <span style={{ opacity: .6, fontSize: 12 }}>加载中…</span>
+export function Spinner({ text = '加载中…' }: { text?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '24px 0', color: 'var(--text2)', fontSize: 13 }}>
+      <span style={{
+        width: 16, height: 16,
+        border: '2px solid var(--border2)',
+        borderTopColor: 'var(--accent)',
+        borderRadius: '50%',
+        display: 'inline-block',
+        animation: 'spin .7s linear infinite',
+        flexShrink: 0,
+      }} />
+      {text}
+    </div>
+  )
 }
 
-export function Section({ title, children }: { title: string; children: ReactNode }) {
+export function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="card">
-      <div className="card-title">{title}</div>
+    <div className="card" style={{ marginBottom: 14 }}>
+      <div className="section-header">
+        <div className="card-title" style={{ marginBottom: 0 }}>{title}</div>
+        {action}
+      </div>
       {children}
     </div>
   )
@@ -67,6 +82,14 @@ export function FormGroup({ label, children }: { label: string; children: ReactN
     <div className="form-group">
       <label className="form-label">{label}</label>
       {children}
+    </div>
+  )
+}
+
+export function EmptyState({ text }: { text: string }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--text3)', fontSize: 13 }}>
+      {text}
     </div>
   )
 }
