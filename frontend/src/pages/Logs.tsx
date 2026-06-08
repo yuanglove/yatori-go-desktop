@@ -24,10 +24,15 @@ export default function LogsPage() {
 
   const visible = filter ? lines.filter(l => l.toLowerCase().includes(filter.toLowerCase())) : lines
 
+  const isErrorLog = (l: string) =>
+    /\]\s*\[错误\]/.test(l) ||
+    /\]\s*ERROR\b/.test(l) ||
+    /^\s*(ERROR|FATAL)\b/.test(l)
+
   const cls = (l: string) => {
-    if (l.includes('[错误]') || l.includes('ERROR')) return 'log-line log-ERROR'
-    if (l.includes('WARN'))  return 'log-line log-WARN'
-    if (l.includes('DEBUG')) return 'log-line log-DEBUG'
+    if (isErrorLog(l)) return 'log-line log-ERROR'
+    if (/\]\s*WARN\b/.test(l) || /^\s*WARN\b/.test(l)) return 'log-line log-WARN'
+    if (/\]\s*DEBUG\b/.test(l) || /^\s*DEBUG\b/.test(l)) return 'log-line log-DEBUG'
     return 'log-line log-INFO'
   }
 

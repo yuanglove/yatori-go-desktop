@@ -64,7 +64,7 @@ export default function TasksPage() {
   useEffect(() => {
     const off = onAnyLog(item => {
       setLastLogs(prev => new Map(prev).set(item.uid, item.msg))
-      if (item.msg.includes('[错误]')) {
+      if (/\]\s*\[错误\]/.test(item.msg) || /\]\s*ERROR\b/.test(item.msg) || /^\s*(ERROR|FATAL)\b/.test(item.msg)) {
         setUIState(prev => new Map(prev).set(item.uid, 'failed'))
         stoppingAt.current.delete(item.uid)
       }

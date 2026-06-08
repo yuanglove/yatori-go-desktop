@@ -190,7 +190,6 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 <option value={0}>0 关闭</option>
                 <option value={1}>1 AI 答题</option>
                 <option value={2}>2 外部题库</option>
-                <option value={3}>3 免费AI（学习通）</option>
               </select>
             </FormGroup>
             <FormGroup label="自动提交试卷">
