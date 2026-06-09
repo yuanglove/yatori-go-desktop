@@ -24,6 +24,25 @@ v0.2.91
 - 统一日志展示，并优化 Windows 中文乱码处理。
 - 配置、数据库和日志统一保存到 `%APPDATA%\yatori-go-console`。
 
+## 手动发布公告
+
+开屏公告由仓库根目录的 `announcement.json` 控制，软件启动时会优先拉取：
+
+`https://raw.githubusercontent.com/yuanglove/yatori-go-desktop/main/announcement.json`
+
+发布新公告时，修改 `announcement.json` 后提交并推送到 GitHub 即可。为了确保所有用户都会再次看到公告，必须把 `id` 改成一个新的值，例如 `2026-06-09-disclaimer-v3`。如果 `id` 不变，已经勾选过“下次不再展示”的用户不会再次看到同一条公告。
+
+字段说明：
+
+- `id`：公告唯一编号。每次要强制所有用户重新看到公告时都要修改。
+- `title`：公告标题。
+- `content`：公告正文，支持换行，按纯文本展示。
+- `level`：公告级别，可用 `info`、`warn`、`error`。
+- `enabled`：是否启用公告，`false` 时不会弹出远程公告。
+- `updatedAt`：更新时间展示文本。
+- `url`：可选详情链接，必须是 `http` 或 `https`。
+
+用户如果没有勾选“下次不再展示”，每次启动都会看到公告；勾选后，只会隐藏当前 `id` 的公告。仪表盘上的“公告”按钮可以随时手动打开当前公告。
 ## 免责声明
 
 本项目代码已开源，仅供学习与技术交流使用，严禁任何形式的倒卖、贩卖或商业牟利。

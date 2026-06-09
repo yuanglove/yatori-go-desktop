@@ -1,4 +1,5 @@
-import { Bell, ExternalLink, CheckCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Megaphone, ExternalLink, CheckCircle } from 'lucide-react'
 import type { AnnouncementData } from '../lib/announcement'
 import { markAnnouncementRead } from '../lib/announcement'
 
@@ -15,8 +16,10 @@ const LEVEL_CLASS: Record<string, string> = {
 }
 
 export default function AnnouncementModal({ data, onClose, openURL }: Props) {
+  const [hideNextTime, setHideNextTime] = useState(false)
+
   const handleRead = () => {
-    markAnnouncementRead(data.id)
+    if (hideNextTime) markAnnouncementRead(data.id)
     onClose()
   }
 
@@ -30,7 +33,7 @@ export default function AnnouncementModal({ data, onClose, openURL }: Props) {
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={data.title}>
       <div className="modal" style={{ maxWidth: 480 }}>
         <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Bell size={16} strokeWidth={2} style={{ flexShrink: 0 }} />
+          <Megaphone size={16} strokeWidth={2} style={{ flexShrink: 0 }} />
           {data.title}
         </div>
 
@@ -44,6 +47,15 @@ export default function AnnouncementModal({ data, onClose, openURL }: Props) {
           </div>
         )}
 
+        <label className="announcement-check">
+          <input
+            type="checkbox"
+            checked={hideNextTime}
+            onChange={e => setHideNextTime(e.target.checked)}
+          />
+          <span>{'下次不再展示此公告'}</span>
+        </label>
+
         <div className="modal-footer">
           {data.url && (
             <button className="btn btn-ghost btn-sm" onClick={handleDetail}>
@@ -53,7 +65,7 @@ export default function AnnouncementModal({ data, onClose, openURL }: Props) {
           )}
           <button className="btn btn-primary" onClick={handleRead}>
             <CheckCircle size={13} strokeWidth={2} style={{ marginRight: 5, verticalAlign: 'middle' }} />
-            {'我知道了'}
+            {hideNextTime ? '我知道了，不再展示' : '我知道了'}
           </button>
         </div>
       </div>

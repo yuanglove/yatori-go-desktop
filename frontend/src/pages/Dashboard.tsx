@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Users, Play, FileCheck, FolderOpen, RefreshCw } from 'lucide-react'
+import { Users, Play, FileCheck, FolderOpen, RefreshCw, Megaphone } from 'lucide-react'
 import { api } from '../lib/api'
 import type { Dashboard } from '../lib/api'
 import { Spinner } from '../components/shared'
@@ -25,7 +25,16 @@ export default function DashboardPage() {
 
   return (
     <div className="page">
-      <div className="page-title">{'仪表盘'}</div>
+      <div className="flex-between page-heading-row">
+        <div className="page-title" style={{ marginBottom: 0 }}>{'仪表盘'}</div>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => window.dispatchEvent(new Event('yatori:open-announcement'))}
+        >
+          <Megaphone size={13} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+          {'公告'}
+        </button>
+      </div>
 
       <div className="stats-row">
         <div className="stat-card">
