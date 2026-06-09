@@ -23,6 +23,7 @@ v0.2.91
 - 增加 GitHub 自动检测新版本和手动检测入口。
 - 统一日志展示，并优化 Windows 中文乱码处理。
 - 配置、数据库和日志统一保存到 `%APPDATA%\yatori-go-console`。
+- announcement.json公告文件
 
 
 ## 免责声明
