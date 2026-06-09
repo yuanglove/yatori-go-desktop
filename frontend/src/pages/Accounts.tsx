@@ -197,13 +197,32 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 <option value={3}>{'3 多任务点并发'}</option>
               </select>
             </FormGroup>
-            <FormGroup label="自动答题方式">
+            <FormGroup label="">
+              <div className="form-label form-label-row">
+                <span>{'自动答题方式'}</span>
+                {req.accountType === 'XUEXITONG' && req.coursesCustom.autoExam === 3 && (
+                  <span className="field-help field-help-danger" tabIndex={0} aria-label="免费AI说明">
+                    {'!'}
+                    <span className="field-help-popover">
+                      {'免费AI为原项目内置能力，稳定性和可用性取决于原接口状态；如果获取不到答案，可开启"AI/题库失败后随机答选择题/判断题"兜底。'}
+                    </span>
+                  </span>
+                )}
+              </div>
               <select className="form-select" value={req.coursesCustom.autoExam}
                 onChange={e => setCC('autoExam', Number(e.target.value))}>
                 <option value={0}>{'0 关闭'}</option>
                 <option value={1}>{'1 AI 答题'}</option>
                 <option value={2}>{'2 外部题库'}</option>
+                {req.accountType === 'XUEXITONG' && (
+                  <option value={3}>{'3 免费AI / 学习通内置AI'}</option>
+                )}
               </select>
+              {req.accountType !== 'XUEXITONG' && req.coursesCustom.autoExam === 3 && (
+                <div className="alert alert-warn" style={{ marginTop: 4, fontSize: 12 }}>
+                  {'免费AI仅对学习通（XUEXITONG）平台有效，当前平台不支持此选项，请切换其他答题方式。'}
+                </div>
+              )}
             </FormGroup>
             <FormGroup label="自动提交试卷">
               <select className="form-select" value={req.coursesCustom.examAutoSubmit}
