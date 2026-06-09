@@ -39,7 +39,9 @@ export async function fetchAnnouncement(): Promise<AnnouncementData | null> {
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
-    const res = await fetch(ANNOUNCEMENT_URL, {
+    const url = new URL(ANNOUNCEMENT_URL)
+    url.searchParams.set('_t', Date.now().toString())
+    const res = await fetch(url.toString(), {
       signal: controller.signal,
       cache: 'no-store',
     })
