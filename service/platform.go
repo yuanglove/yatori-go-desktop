@@ -14,6 +14,8 @@ func PlatformSupportList() []PlatformInfo {
 			Note: "支持视频/文档/章节测验/作业/考试，VideoModel 1/2/3"},
 		{Code: "YINGHUA", Name: "英华学堂", GUISupport: "full",
 			Note: "支持视频 VideoModel 1/2/3、作业、考试"},
+		{Code: "CANGHUI", Name: "仓辉实训", GUISupport: "full",
+			Note: "按英华兼容路径运行；如学校是英华套壳，也可直接使用 YINGHUA"},
 		{Code: "ENAEA", Name: "学习公社", GUISupport: "full",
 			Note: "支持视频 VideoModel 1/2，worker 子进程运行"},
 		{Code: "QSXT", Name: "青书学堂", GUISupport: "full",

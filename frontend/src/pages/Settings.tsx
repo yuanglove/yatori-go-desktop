@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import type { AppConfig } from '../lib/api'
 import { FormGroup, Section, Spinner } from '../components/shared'
 import { applyTheme, THEMES } from '../lib/theme'
+import AnimatedSelect from '../components/AnimatedSelect'
 
 const AI_TYPES = ['TONGYI', 'SILICON', 'DOUBAO', 'CHATGLM', 'XINGHUO', 'OPENAI', 'DEEPSEEK', 'METAAI', 'OTHER']
 
@@ -114,38 +115,46 @@ export default function SettingsPage() {
       <Section title="基础设置">
         <div className="form-row form-row-3">
           <FormGroup label="界面主题">
-            <select className="form-select" value={cfg.setting.basicSetting.theme || 'dark'} onChange={e => setTheme(e.target.value)}>
-              {THEMES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
+            <AnimatedSelect
+              value={cfg.setting.basicSetting.theme || 'dark'}
+              options={THEMES.map(t => ({ value: t.value, label: t.label }))}
+              onChange={v => setTheme(String(v))}
+            />
           </FormGroup>
           <FormGroup label="完成提示音">
-            <select className="form-select" value={cfg.setting.basicSetting.completionTone} onChange={e => setBasic('completionTone', Number(e.target.value))}>
-              <option value={0}>{'关闭'}</option>
-              <option value={1}>{'开启'}</option>
-            </select>
+            <AnimatedSelect
+              value={cfg.setting.basicSetting.completionTone}
+              options={[{ value: 0, label: '关闭' }, { value: 1, label: '开启' }]}
+              onChange={v => setBasic('completionTone', Number(v))}
+            />
           </FormGroup>
           <FormGroup label="彩色日志">
-            <select className="form-select" value={cfg.setting.basicSetting.colorLog} onChange={e => setBasic('colorLog', Number(e.target.value))}>
-              <option value={0}>{'关闭'}</option>
-              <option value={1}>{'开启'}</option>
-            </select>
+            <AnimatedSelect
+              value={cfg.setting.basicSetting.colorLog}
+              options={[{ value: 0, label: '关闭' }, { value: 1, label: '开启' }]}
+              onChange={v => setBasic('colorLog', Number(v))}
+            />
           </FormGroup>
           <FormGroup label="输出日志文件">
-            <select className="form-select" value={cfg.setting.basicSetting.logOutFileSw} onChange={e => setBasic('logOutFileSw', Number(e.target.value))}>
-              <option value={0}>{'关闭'}</option>
-              <option value={1}>{'开启'}</option>
-            </select>
+            <AnimatedSelect
+              value={cfg.setting.basicSetting.logOutFileSw}
+              options={[{ value: 0, label: '关闭' }, { value: 1, label: '开启' }]}
+              onChange={v => setBasic('logOutFileSw', Number(v))}
+            />
           </FormGroup>
           <FormGroup label="日志等级">
-            <select className="form-select" value={cfg.setting.basicSetting.logLevel} onChange={e => setBasic('logLevel', e.target.value)}>
-              {['INFO', 'DEBUG', 'WARN', 'ERROR'].map(l => <option key={l}>{l}</option>)}
-            </select>
+            <AnimatedSelect
+              value={cfg.setting.basicSetting.logLevel}
+              options={['INFO', 'DEBUG', 'WARN', 'ERROR'].map(l => ({ value: l, label: l }))}
+              onChange={v => setBasic('logLevel', String(v))}
+            />
           </FormGroup>
           <FormGroup label="日志模式">
-            <select className="form-select" value={cfg.setting.basicSetting.logModel} onChange={e => setBasic('logModel', Number(e.target.value))}>
-              <option value={0}>{'以视频提交为基准'}</option>
-              <option value={1}>{'以课程为基准'}</option>
-            </select>
+            <AnimatedSelect
+              value={cfg.setting.basicSetting.logModel}
+              options={[{ value: 0, label: '以视频提交为基准' }, { value: 1, label: '以课程为基准' }]}
+              onChange={v => setBasic('logModel', Number(v))}
+            />
           </FormGroup>
         </div>
       </Section>
@@ -179,9 +188,11 @@ export default function SettingsPage() {
         )}
         <div className="form-row form-row-2">
           <FormGroup label="AI 类型">
-            <select className="form-select" value={cfg.setting.aiSetting.aiType} onChange={e => setAI('aiType', e.target.value)}>
-              {AI_TYPES.map(t => <option key={t}>{t}</option>)}
-            </select>
+            <AnimatedSelect
+              value={cfg.setting.aiSetting.aiType}
+              options={AI_TYPES.map(t => ({ value: t, label: t }))}
+              onChange={v => setAI('aiType', String(v))}
+            />
           </FormGroup>
           <FormGroup label="模型名">
             <input className="form-input" value={cfg.setting.aiSetting.model} placeholder="例如 Qwen/Qwen3-32B" onChange={e => setAI('model', e.target.value)} />
@@ -222,10 +233,11 @@ export default function SettingsPage() {
       <Section title="邮件通知">
         <div className="form-row form-row-3">
           <FormGroup label="开关">
-            <select className="form-select" value={cfg.setting.emailInform.sw} onChange={e => setEmail('sw', Number(e.target.value))}>
-              <option value={0}>{'关闭'}</option>
-              <option value={1}>{'开启'}</option>
-            </select>
+            <AnimatedSelect
+              value={cfg.setting.emailInform.sw}
+              options={[{ value: 0, label: '关闭' }, { value: 1, label: '开启' }]}
+              onChange={v => setEmail('sw', Number(v))}
+            />
           </FormGroup>
           <FormGroup label="SMTP Host">
             <input className="form-input" value={cfg.setting.emailInform.smtpHost} onChange={e => setEmail('smtpHost', e.target.value)} />

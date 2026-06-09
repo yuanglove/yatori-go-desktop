@@ -11,6 +11,7 @@ yatori.db
 assets/log/
 .DS_Store
 .vscode/
+.vs/
 .idea/
 last-run.log
 worker/*.log

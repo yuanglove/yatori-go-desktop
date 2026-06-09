@@ -475,6 +475,8 @@ html[data-theme="graphite"] body::after {
   display: inline-flex; align-items: center;
   padding: 2px 8px; border-radius: 20px;
   font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .badge-running { background: var(--badge-running-bg); color: var(--success); }
 .badge-stopped { background: var(--badge-stopped-bg); color: var(--text2); }
@@ -482,6 +484,40 @@ html[data-theme="graphite"] body::after {
 .badge-full    { background: var(--accent-dim);        color: var(--accent); }
 .badge-config  { background: var(--warn-dim);          color: var(--warn); }
 .badge-none    { background: var(--badge-stopped-bg);  color: var(--text3); }
+
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.segmented-option {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--text2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast);
+}
+.segmented-option:hover {
+  color: var(--text);
+  background: var(--bg3);
+}
+.segmented-option.active {
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgba(0,0,0,.16);
+}
+.segmented-option:active { transform: scale(.97); }
 
 /* ── Stats ── */
 .stats-row {
@@ -762,3 +798,375 @@ html[data-theme="graphite"] body::after {
 }
 
 .page-heading-row { margin-bottom: 18px; }
+
+/* ── TagInput ── */
+.tag-input-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 5px 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: text;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+.tag-input-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.tag-input-wrap.tag-include .tag-chip { background: var(--accent-dim); border-color: color-mix(in srgb, var(--accent) 30%, transparent); color: var(--accent); }
+.tag-input-wrap.tag-exclude .tag-chip { background: var(--danger-dim); border-color: color-mix(in srgb, var(--danger) 30%, transparent); color: var(--danger); }
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px 2px 8px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  animation: tagIn var(--dur-fast) var(--ease-out);
+}
+@keyframes tagIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.tag-chip-del {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity var(--dur-fast), background var(--dur-fast);
+  flex-shrink: 0;
+}
+.tag-chip-del:hover { opacity: 1; background: rgba(0,0,0,.12); }
+.tag-input-field {
+  flex: 1;
+  min-width: 80px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  outline: none;
+  padding: 0 2px;
+}
+.tag-input-field::placeholder { color: var(--text3); }
+
+/* ── Nav icon polish ── */
+.nav-link .nav-icon {
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast);
+}
+.nav-link:hover .nav-icon { transform: translateX(1px); opacity: .9; }
+.nav-link.active .nav-icon { transform: translateX(0); }
+
+/* ── Card stagger on page load ── */
+.page > .card:nth-child(1) { animation: fadeInUp var(--dur-slow) var(--ease-out) 30ms both; }
+.page > .card:nth-child(2) { animation: fadeInUp var(--dur-slow) var(--ease-out) 60ms both; }
+.page > .card:nth-child(3) { animation: fadeInUp var(--dur-slow) var(--ease-out) 90ms both; }
+.page > .card:nth-child(4) { animation: fadeInUp var(--dur-slow) var(--ease-out) 120ms both; }
+.page > .card:nth-child(5) { animation: fadeInUp var(--dur-slow) var(--ease-out) 150ms both; }
+
+/* ═══════════════════════════════════════════════════
+   MICRO-INTERACTION UPGRADE  (2026-06-09)
+   ═══════════════════════════════════════════════════ */
+
+/* ── 1. Page entrance – enhanced ──────────────────── */
+.page {
+  animation: pageEnter 220ms var(--ease-out) both;
+}
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px) scale(0.995); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* ── 2. Modal overlay – layered entrance ────────────
+   overlay fades in, modal body slides up + scales in */
+.modal-overlay {
+  animation: overlayIn 180ms ease both;
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.modal {
+  animation: modalIn 220ms var(--ease-out) both;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* ── 3. Collapse / AnimatedPresence ─────────────────
+   Uses grid-template-rows: 0fr ↔ 1fr trick.
+   The inner div needs min-height:0 to clip content. */
+.collapse-wrap {
+  display: grid;
+  overflow: hidden;
+  transition:
+    grid-template-rows 220ms var(--ease-out),
+    opacity            200ms ease;
+}
+.collapse-open  { grid-template-rows: 1fr; opacity: 1; }
+.collapse-close { grid-template-rows: 0fr; opacity: 0; }
+.collapse-inner { min-height: 0; }
+
+/* entering content slides slightly */
+.collapse-open .collapse-inner {
+  animation: collapseSlideIn 220ms var(--ease-out) both;
+}
+@keyframes collapseSlideIn {
+  from { transform: translateY(-4px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── 4. Table row entrance ──────────────────────────
+   tbody rows stagger on first render */
+tbody tr {
+  animation: rowIn 200ms var(--ease-out) both;
+}
+tbody tr:nth-child(1)  { animation-delay: 20ms; }
+tbody tr:nth-child(2)  { animation-delay: 40ms; }
+tbody tr:nth-child(3)  { animation-delay: 60ms; }
+tbody tr:nth-child(4)  { animation-delay: 80ms; }
+tbody tr:nth-child(5)  { animation-delay: 100ms; }
+tbody tr:nth-child(6)  { animation-delay: 120ms; }
+tbody tr:nth-child(7)  { animation-delay: 140ms; }
+tbody tr:nth-child(8)  { animation-delay: 160ms; }
+tbody tr:nth-child(n+9){ animation-delay: 180ms; }
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+tbody tr {
+  transition: background-color var(--dur-fast);
+}
+
+/* ── 5. Select / input polish ───────────────────────*/
+.form-select,
+.form-input {
+  transition:
+    border-color var(--dur-fast),
+    box-shadow   var(--dur-fast),
+    background   var(--dur-fast);
+}
+.form-select:hover:not(:disabled),
+.form-input:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+/* ── 6. Button microinteraction ─────────────────────*/
+.btn {
+  transition:
+    background   var(--dur-fast),
+    box-shadow   var(--dur-fast),
+    transform    var(--dur-fast) var(--ease-out),
+    opacity      var(--dur-fast);
+}
+.btn:not(:disabled):hover { transform: translateY(-1px); }
+.btn:not(:disabled):active { transform: scale(0.97) translateY(0); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── 7. Update-toast slide-in ───────────────────────*/
+.update-toast {
+  animation: toastIn 260ms var(--ease-out) both;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(18px) translateY(-4px); }
+  to   { opacity: 1; transform: translateX(0)    translateY(0); }
+}
+
+/* ── 8. Announcement / Bell icon hover wiggle ───────*/
+.btn-announce-icon,
+.announce-bell {
+  display: inline-block;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+button:hover .btn-announce-icon,
+button:hover .announce-bell {
+  animation: bellWiggle 400ms var(--ease-out) both;
+}
+@keyframes bellWiggle {
+  0%   { transform: rotate(0deg); }
+  20%  { transform: rotate(-12deg); }
+  45%  { transform: rotate(10deg); }
+  65%  { transform: rotate(-7deg); }
+  80%  { transform: rotate(5deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* ── 9. prefers-reduced-motion – full override ──────
+   Replaces/extends any earlier reduced-motion block   */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:         0.01ms !important;
+    animation-iteration-count:  1      !important;
+    transition-duration:        0.01ms !important;
+    scroll-behavior:            auto   !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   AnimatedSelect
+   ═══════════════════════════════════════════════════ */
+.animated-select {
+  position: relative;
+  width: 100%;
+}
+.animated-select-disabled { opacity: .45; pointer-events: none; }
+
+/* trigger — matches .form-select visually */
+.animated-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  gap: 6px;
+  transition:
+    border-color var(--dur-fast),
+    box-shadow   var(--dur-fast),
+    background   var(--dur-fast);
+}
+.animated-select-trigger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+.animated-select-trigger:focus-visible,
+.animated-select-trigger.open {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.animated-select-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* chevron rotation */
+.animated-select-chevron {
+  flex-shrink: 0;
+  color: var(--text3);
+  transition: transform var(--dur-base) var(--ease-out), color var(--dur-fast);
+}
+.animated-select-chevron.rotated { transform: rotate(180deg); color: var(--accent); }
+
+/* floating menu */
+.animated-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.22), 0 2px 6px rgba(0,0,0,.14);
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+  list-style: none;
+  margin: 0;
+  transform-origin: top;
+  will-change: opacity, transform, filter;
+}
+.animated-select-menu.open {
+  animation: selectMenuIn 240ms var(--ease-out) both;
+}
+.animated-select-menu.closing {
+  animation: selectMenuOut 150ms ease both;
+}
+@keyframes selectMenuIn {
+  from { opacity: 0; transform: translateY(-10px) scaleY(0.9); filter: blur(2px); }
+  to   { opacity: 1; transform: translateY(0)     scaleY(1);   filter: blur(0); }
+}
+@keyframes selectMenuOut {
+  from { opacity: 1; transform: translateY(0)     scaleY(1);   filter: blur(0); }
+  to   { opacity: 0; transform: translateY(-8px) scaleY(0.92); filter: blur(1px); }
+}
+
+/* options */
+.animated-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast);
+  user-select: none;
+}
+.animated-select-menu.open .animated-select-option {
+  animation: selectOptionIn 180ms var(--ease-out) both;
+}
+.animated-select-menu.open .animated-select-option:nth-child(1) { animation-delay: 20ms; }
+.animated-select-menu.open .animated-select-option:nth-child(2) { animation-delay: 35ms; }
+.animated-select-menu.open .animated-select-option:nth-child(3) { animation-delay: 50ms; }
+.animated-select-menu.open .animated-select-option:nth-child(4) { animation-delay: 65ms; }
+.animated-select-menu.open .animated-select-option:nth-child(5) { animation-delay: 80ms; }
+.animated-select-menu.open .animated-select-option:nth-child(6) { animation-delay: 95ms; }
+.animated-select-menu.open .animated-select-option:nth-child(7) { animation-delay: 110ms; }
+.animated-select-menu.open .animated-select-option:nth-child(8) { animation-delay: 125ms; }
+.animated-select-menu.open .animated-select-option:nth-child(n+9) { animation-delay: 140ms; }
+@keyframes selectOptionIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animated-select-option.disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.animated-select-option.highlighted {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.animated-select-option.active {
+  font-weight: 600;
+  color: var(--accent);
+}
+.animated-select-option.active.highlighted {
+  background: var(--accent-dim);
+}
+
+.animated-select-check {
+  flex-shrink: 0;
+  color: var(--accent);
+  margin-left: 8px;
+}
+
+/* scrollbar styling */
+.animated-select-menu::-webkit-scrollbar { width: 4px; }
+.animated-select-menu::-webkit-scrollbar-track { background: transparent; }
+.animated-select-menu::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animated-select-menu.open,
+  .animated-select-menu.closing,
+  .animated-select-chevron { animation: none !important; transition-duration: 0.01ms !important; }
+}

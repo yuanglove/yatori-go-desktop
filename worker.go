@@ -24,7 +24,7 @@ func workerLog(format string, args ...interface{}) string {
 // needsCoreRuntime 判断平台是否需要初始化 ONNX Runtime（OCR）
 func needsCoreRuntime(platform string) bool {
 	switch platform {
-	case "YINGHUA", "XUEXITONG", "CQIE", "QSXT", "ICVE":
+	case "YINGHUA", "CANGHUI", "XUEXITONG", "CQIE", "QSXT", "ICVE":
 		return true
 	default:
 		return false
@@ -71,6 +71,7 @@ func runWorker(uid string) int {
 			ColorLog:     0,
 			LogOutFileSw: cfg.Setting.BasicSetting.LogOutFileSw,
 			LogLevel:     cfg.Setting.BasicSetting.LogLevel,
+			LogModel:     cfg.Setting.BasicSetting.LogModel,
 		},
 		EmailInform: consoleConfig.EmailInform{
 			Sw:       cfg.Setting.EmailInform.Sw,
@@ -92,6 +93,7 @@ func runWorker(uid string) int {
 	if setting.BasicSetting.LogLevel == "" {
 		setting.BasicSetting.LogLevel = "INFO"
 	}
+	p("日志配置: level=%s model=%d file=%d", setting.BasicSetting.LogLevel, setting.BasicSetting.LogModel, setting.BasicSetting.LogOutFileSw)
 
 	user := service.BuildUserFromPO(po)
 
@@ -148,7 +150,7 @@ func runWorker(uid string) int {
 		p("登录成功，开始学习任务")
 		runErr = service.SafeRun(context.Background(), setting, &user, xxtCache, submitThreshold, randomAnswerOnFail, emit)
 
-	case "YINGHUA":
+	case "YINGHUA", "CANGHUI":
 		p("英华参数: URL=%q Account=%q PasswordEnc空=%v 密码长度=%d",
 			po.URL, po.Account, po.PasswordEnc == "", len(service.DecodePassword(po.PasswordEnc)))
 		if po.URL == "" {
