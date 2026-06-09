@@ -32,9 +32,15 @@ export default function Layout() {
     autoCheckForUpdates().then(info => {
       if (info) setUpdateInfo(info)
     })
-    fetchAnnouncement().then(data => {
-      if (data && !isAnnouncementRead(data.id)) setAnnouncement(data)
-    })
+    const openAnnouncement = (respectRead: boolean) => {
+      fetchAnnouncement().then(data => {
+        if (data && (!respectRead || !isAnnouncementRead(data.id))) setAnnouncement(data)
+      })
+    }
+    const handleOpenAnnouncement = () => openAnnouncement(false)
+    openAnnouncement(true)
+    window.addEventListener('yatori:open-announcement', handleOpenAnnouncement)
+    return () => window.removeEventListener('yatori:open-announcement', handleOpenAnnouncement)
   }, [])
 
   const openUpdate = () => {
