@@ -1,7 +1,7 @@
 {
   "name": "yatori-go-desktop-frontend",
   "private": true,
-  "version": "0.2.91",
+  "version": "0.2.9178",
   "type": "module",
   "scripts": {
     "dev": "vite",

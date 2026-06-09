@@ -167,7 +167,7 @@ func isCoreLog(line string) bool {
 	for _, kw := range []string{
 		"课程", "任务点", "视频", "学时", "提交", "学习", "登录",
 		"拉取", "章节", "考试", "完成", "失败", "错误",
-		"INFO", "WARN", "ERROR", "[系统]",
+		"INFO", "DEBUG", "WARN", "ERROR", "[系统]",
 	} {
 		if strings.Contains(line, kw) {
 			return true

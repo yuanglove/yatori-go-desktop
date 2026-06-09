@@ -80,7 +80,7 @@ export function Section({ title, children, action }: { title: string; children: 
 export function FormGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="form-group">
-      <label className="form-label">{label}</label>
+      {label && <label className="form-label">{label}</label>}
       {children}
     </div>
   )

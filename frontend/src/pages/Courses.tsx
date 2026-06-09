@@ -2,8 +2,14 @@ import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
 import type { CourseVO, AccountVO } from '../lib/api'
 import { Spinner, EmptyState } from '../components/shared'
+import AnimatedSelect from '../components/AnimatedSelect'
 
 const SUPPORTED = new Set(['XUEXITONG', 'YINGHUA', 'HQKJ', 'WELEARN'])
+
+function isCourseComplete(c: CourseVO): boolean {
+  if (c.jobCount > 0 && c.jobFinishCount >= c.jobCount) return true
+  return c.hasProgress && c.jobRate >= 100
+}
 
 export default function CoursesPage() {
   const [accounts, setAccounts] = useState<AccountVO[]>([])
@@ -33,7 +39,7 @@ export default function CoursesPage() {
 
   const filtered = courses.filter(c => {
     if (search && !c.courseName.includes(search)) return false
-    if (onlyIncomplete && c.jobRate >= 100) return false
+    if (onlyIncomplete && isCourseComplete(c)) return false
     return true
   })
 
@@ -43,18 +49,17 @@ export default function CoursesPage() {
 
       <div className="card">
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <select
-            className="form-select"
-            style={{ maxWidth: 300 }}
+          <div style={{ width: 300, maxWidth: '100%' }}>
+            <AnimatedSelect
             value={selectedUid}
-            onChange={e => { setUid(e.target.value); setCourses([]); setErr('') }}
-          >
-            {accounts.map((a: AccountVO) => (
-              <option key={a.uid} value={a.uid}>
-                [{a.accountType}] {a.remarkName || a.account}
-              </option>
-            ))}
-          </select>
+              options={accounts.map((a: AccountVO) => ({
+                value: a.uid,
+                label: `[${a.accountType}] ${a.remarkName || a.account}`,
+              }))}
+              placeholder="请选择账号"
+              onChange={v => { setUid(String(v)); setCourses([]); setErr('') }}
+            />
+          </div>
           <button className="btn btn-primary" onClick={load} disabled={loading || !selectedUid}>
             {loading ? '加载中…' : '刷新课程进度'}
           </button>
@@ -124,7 +129,9 @@ export default function CoursesPage() {
                       : (c.hasProgress ? '未返回' : (c.rawStatusText || '—'))}
                   </td>
                   <td>
-                    {!c.isStart
+                    {isCourseComplete(c)
+                      ? <span className="badge badge-stopped">已完成</span>
+                      : !c.isStart
                       ? <span className="badge badge-stopped">未开课</span>
                       : c.state === 1
                         ? <span className="badge badge-stopped">已结课</span>
@@ -151,9 +158,7 @@ export default function CoursesPage() {
                       </div>
                     ) : <span className="text-muted text-sm">暂无进度</span>}
                   </td>
-                  <td className="text-muted text-sm" style={{ fontFamily: 'monospace' }}>
-                    {c.courseId || '—'}
-                  </td>
+                  <td className="text-muted text-sm">{c.courseId || '—'}</td>
                 </tr>
               ))}
             </tbody>

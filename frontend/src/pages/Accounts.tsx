@@ -3,6 +3,9 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
 import type { AccountVO, AccountReq, CoursesCustom } from '../lib/api'
 import { useAsync, Confirm, Section, FormGroup, Spinner } from '../components/shared'
+import TagInput from '../components/TagInput'
+import Collapse from '../components/Collapse'
+import AnimatedSelect from '../components/AnimatedSelect'
 
 const PLATFORMS = [
   { code: 'YINGHUA', name: '英华学堂' }, { code: 'XUEXITONG', name: '学习通' },
@@ -144,10 +147,11 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
         <Section title="基本信息">
           <div className="form-row form-row-2">
             <FormGroup label="平台类型 *">
-              <select className="form-select" value={req.accountType}
-                onChange={e => set('accountType', e.target.value)}>
-                {PLATFORMS.map(p => <option key={p.code} value={p.code}>{p.name + ' (' + p.code + ')'}</option>)}
-              </select>
+              <AnimatedSelect
+                value={req.accountType}
+                options={PLATFORMS.map(p => ({ value: p.code, label: p.name + ' (' + p.code + ')' }))}
+                onChange={v => set('accountType', String(v))}
+              />
             </FormGroup>
             <FormGroup label={urlLabel}>
               <input className="form-input" value={req.url}
@@ -168,10 +172,11 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 onChange={e => set('remarkName', e.target.value)} />
             </FormGroup>
             <FormGroup label="使用代理">
-              <select className="form-select" value={req.isProxy}
-                onChange={e => set('isProxy', Number(e.target.value))}>
-                <option value={0}>{'否'}</option><option value={1}>{'是'}</option>
-              </select>
+              <AnimatedSelect
+                value={req.isProxy}
+                options={[{ value: 0, label: '否' }, { value: 1, label: '是' }]}
+                onChange={v => set('isProxy', Number(v))}
+              />
             </FormGroup>
           </div>
           <FormGroup label="通知邮箱（多个用英文逗号分隔）">
@@ -182,20 +187,23 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
         </Section>
 
         <Section title="课程自定义">
-          {req.accountType === 'XUEXITONG' && (
+          <Collapse show={req.accountType === 'XUEXITONG'}>
             <div className="alert alert-info" style={{ marginBottom: 12 }}>
               {'CxNode 控制同一账号内同时进行的视频任务点数量；全局最大任务数只控制同时运行的账号数量。'}
             </div>
-          )}
+          </Collapse>
           <div className="form-row form-row-3">
             <FormGroup label="视频模式">
-              <select className="form-select" value={req.coursesCustom.videoModel}
-                onChange={e => setCC('videoModel', Number(e.target.value))}>
-                <option value={0}>{'0 不刷'}</option>
-                <option value={1}>{'1 普通（GUI 可用）'}</option>
-                <option value={2}>{'2 多课程并发'}</option>
-                <option value={3}>{'3 多任务点并发'}</option>
-              </select>
+              <AnimatedSelect
+                value={req.coursesCustom.videoModel}
+                options={[
+                  { value: 0, label: '0 不刷' },
+                  { value: 1, label: '1 普通（GUI 可用）' },
+                  { value: 2, label: '2 多课程并发' },
+                  { value: 3, label: '3 多任务点并发' },
+                ]}
+                onChange={v => setCC('videoModel', Number(v))}
+              />
             </FormGroup>
             <FormGroup label="">
               <div className="form-label form-label-row">
@@ -209,30 +217,34 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                   </span>
                 )}
               </div>
-              <select className="form-select" value={req.coursesCustom.autoExam}
-                onChange={e => setCC('autoExam', Number(e.target.value))}>
-                <option value={0}>{'0 关闭'}</option>
-                <option value={1}>{'1 AI 答题'}</option>
-                <option value={2}>{'2 外部题库'}</option>
-                {req.accountType === 'XUEXITONG' && (
-                  <option value={3}>{'3 免费AI / 学习通内置AI'}</option>
-                )}
-              </select>
-              {req.accountType !== 'XUEXITONG' && req.coursesCustom.autoExam === 3 && (
+              <AnimatedSelect
+                value={req.coursesCustom.autoExam}
+                options={[
+                  { value: 0, label: '0 关闭' },
+                  { value: 1, label: '1 AI 答题' },
+                  { value: 2, label: '2 外部题库' },
+                  ...(req.accountType === 'XUEXITONG' ? [{ value: 3, label: '3 免费AI / 学习通内置AI' }] : []),
+                ]}
+                onChange={v => setCC('autoExam', Number(v))}
+              />
+              <Collapse show={req.accountType !== 'XUEXITONG' && req.coursesCustom.autoExam === 3}>
                 <div className="alert alert-warn" style={{ marginTop: 4, fontSize: 12 }}>
                   {'免费AI仅对学习通（XUEXITONG）平台有效，当前平台不支持此选项，请切换其他答题方式。'}
                 </div>
-              )}
+              </Collapse>
             </FormGroup>
             <FormGroup label="自动提交试卷">
-              <select className="form-select" value={req.coursesCustom.examAutoSubmit}
-                onChange={e => setCC('examAutoSubmit', Number(e.target.value))}>
-                <option value={0}>{'0 不提交'}</option>
-                <option value={1}>{'1 提交'}</option>
-                <option value={2}>{'2 智能提交'}</option>
-              </select>
+              <AnimatedSelect
+                value={req.coursesCustom.examAutoSubmit}
+                options={[
+                  { value: 0, label: '0 不提交' },
+                  { value: 1, label: '1 提交' },
+                  { value: 2, label: '2 智能提交' },
+                ]}
+                onChange={v => setCC('examAutoSubmit', Number(v))}
+              />
             </FormGroup>
-            {req.coursesCustom.examAutoSubmit === 2 && (
+            <Collapse show={req.coursesCustom.examAutoSubmit === 2}>
               <FormGroup label="智能提交阈值 (%)">
                 <input className="form-input" type="number" min={1} max={100}
                   value={!req.coursesCustom.submitThresholdPercent || req.coursesCustom.submitThresholdPercent <= 0
@@ -242,12 +254,13 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                   {'已答题数量达到总题数该百分比时提交；未达到则只保存。'}
                 </div>
               </FormGroup>
-            )}
+            </Collapse>
             <FormGroup label="打乱顺序">
-              <select className="form-select" value={req.coursesCustom.shuffleSw}
-                onChange={e => setCC('shuffleSw', Number(e.target.value))}>
-                <option value={0}>{'关闭'}</option><option value={1}>{'开启'}</option>
-              </select>
+              <AnimatedSelect
+                value={req.coursesCustom.shuffleSw}
+                options={[{ value: 0, label: '关闭' }, { value: 1, label: '开启' }]}
+                onChange={v => setCC('shuffleSw', Number(v))}
+              />
             </FormGroup>
             <FormGroup label="WeLearn 学时时间范围">
               <input className="form-input" placeholder="如：10-30"
@@ -261,43 +274,53 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 onChange={e => setCC('cxNode', Number(e.target.value))} />
             </FormGroup>
             <FormGroup label="章节测验（CxChapterTestSw）">
-              <select className="form-select" value={req.coursesCustom.cxChapterTestSw ?? 1}
-                onChange={e => setCC('cxChapterTestSw', Number(e.target.value))}>
-                <option value={0}>{'关闭'}</option><option value={1}>{'开启'}</option>
-              </select>
+              <AnimatedSelect
+                value={req.coursesCustom.cxChapterTestSw ?? 1}
+                options={[{ value: 0, label: '关闭' }, { value: 1, label: '开启' }]}
+                onChange={v => setCC('cxChapterTestSw', Number(v))}
+              />
             </FormGroup>
             <FormGroup label="作业（CxWorkSw）">
-              <select className="form-select" value={req.coursesCustom.cxWorkSw ?? 1}
-                onChange={e => setCC('cxWorkSw', Number(e.target.value))}>
-                <option value={0}>{'关闭'}</option><option value={1}>{'开启'}</option>
-              </select>
+              <AnimatedSelect
+                value={req.coursesCustom.cxWorkSw ?? 1}
+                options={[{ value: 0, label: '关闭' }, { value: 1, label: '开启' }]}
+                onChange={v => setCC('cxWorkSw', Number(v))}
+              />
             </FormGroup>
             <FormGroup label="考试（CxExamSw）">
-              <select className="form-select" value={req.coursesCustom.cxExamSw ?? 1}
-                onChange={e => setCC('cxExamSw', Number(e.target.value))}>
-                <option value={0}>{'关闭'}</option><option value={1}>{'开启'}</option>
-              </select>
+              <AnimatedSelect
+                value={req.coursesCustom.cxExamSw ?? 1}
+                options={[{ value: 0, label: '关闭' }, { value: 1, label: '开启' }]}
+                onChange={v => setCC('cxExamSw', Number(v))}
+              />
             </FormGroup>
             <FormGroup label="AI/题库失败后随机答题">
-              <select className="form-select" value={req.coursesCustom.randomAnswerOnFail ?? 0}
-                onChange={e => setCC('randomAnswerOnFail', Number(e.target.value))}>
-                <option value={0}>{'关闭'}</option><option value={1}>{'开启'}</option>
-              </select>
+              <AnimatedSelect
+                value={req.coursesCustom.randomAnswerOnFail ?? 0}
+                options={[{ value: 0, label: '关闭' }, { value: 1, label: '开启' }]}
+                onChange={v => setCC('randomAnswerOnFail', Number(v))}
+              />
               <div className="text-muted text-sm" style={{ marginTop: 3 }}>
                 {'仅在 AI/题库无有效答案时生效；只随机选择题和判断题。'}
               </div>
             </FormGroup>
           </div>
           <div className="form-row form-row-2" style={{ marginTop: 4 }}>
-            <FormGroup label="包含课程（逗号分隔，空=全部）">
-              <input className="form-input"
-                value={(req.coursesCustom.includeCourses ?? []).join(',')}
-                onChange={e => setCC('includeCourses', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+            <FormGroup label="包含课程（空=全部）">
+              <TagInput
+                value={req.coursesCustom.includeCourses ?? []}
+                onChange={tags => setCC('includeCourses', tags)}
+                placeholder={'输入课程名，Enter 或逗号确认'}
+                variant="include"
+              />
             </FormGroup>
-            <FormGroup label="排除课程（逗号分隔）">
-              <input className="form-input"
-                value={(req.coursesCustom.excludeCourses ?? []).join(',')}
-                onChange={e => setCC('excludeCourses', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+            <FormGroup label="排除课程">
+              <TagInput
+                value={req.coursesCustom.excludeCourses ?? []}
+                onChange={tags => setCC('excludeCourses', tags)}
+                placeholder={'输入课程名，Enter 或逗号确认'}
+                variant="exclude"
+              />
             </FormGroup>
           </div>
         </Section>
