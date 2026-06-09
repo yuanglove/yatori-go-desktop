@@ -7,6 +7,8 @@ import { api, type UpdateInfo } from '../lib/api'
 import { autoCheckForUpdates } from '../lib/update'
 import { applyTheme } from '../lib/theme'
 import { PROJECT_RELEASES_URL } from '../lib/version'
+import { fetchAnnouncement, isAnnouncementRead, type AnnouncementData } from '../lib/announcement'
+import AnnouncementModal from './AnnouncementModal'
 
 const links = [
   { to: '/',         label: '仪表盘',   Icon: LayoutDashboard },
@@ -20,6 +22,7 @@ const links = [
 
 export default function Layout() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+  const [announcement, setAnnouncement] = useState<AnnouncementData | null>(null)
 
   useEffect(() => {
     applyTheme(localStorage.getItem('yatori-theme') || 'dark')
@@ -28,6 +31,9 @@ export default function Layout() {
     }).catch(() => applyTheme(localStorage.getItem('yatori-theme') || 'dark'))
     autoCheckForUpdates().then(info => {
       if (info) setUpdateInfo(info)
+    })
+    fetchAnnouncement().then(data => {
+      if (data && !isAnnouncementRead(data.id)) setAnnouncement(data)
     })
   }, [])
 
@@ -40,8 +46,8 @@ export default function Layout() {
     <div className="layout">
       <nav className="nav">
         <div className="nav-logo">
-          <div className="nav-logo-title">Yatori</div>
-          <small>学习管理工具</small>
+          <div className="nav-logo-title">{'Yatori'}</div>
+          <small>{'学习管理工具'}</small>
         </div>
         <div className="nav-links">
           {links.map(({ to, label, Icon }) => (
@@ -59,7 +65,7 @@ export default function Layout() {
           ))}
         </div>
         <div className="nav-footer">
-          仅用于本人授权账号<br />合规使用
+          {'仅用于本人授权账号'}<br />{'合规使用'}
         </div>
       </nav>
 
@@ -68,7 +74,7 @@ export default function Layout() {
       </main>
 
       {updateInfo && (
-        <div className="update-toast" role="dialog" aria-label="发现新版本">
+        <div className="update-toast" role="dialog" aria-label={'发现新版本'}>
           <div className="update-toast-title">
             <Bell size={13} strokeWidth={2} style={{ verticalAlign: 'middle', marginRight: 5 }} />
             {'发现新版本'}
@@ -81,6 +87,14 @@ export default function Layout() {
             <button className="btn btn-primary btn-sm" onClick={openUpdate}>{'去更新'}</button>
           </div>
         </div>
+      )}
+
+      {announcement && (
+        <AnnouncementModal
+          data={announcement}
+          onClose={() => setAnnouncement(null)}
+          openURL={url => api.openURL(url)}
+        />
       )}
     </div>
   )

@@ -373,6 +373,67 @@ html[data-theme="graphite"] body::after {
   display: block; font-size: 12px; font-weight: 500;
   color: var(--text2); margin-bottom: 5px; letter-spacing: 0.01em;
 }
+.form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.field-help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+  flex-shrink: 0;
+}
+.field-help-danger {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+.field-help-danger::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid color-mix(in srgb, var(--danger) 65%, transparent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.field-help-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: min(280px, 72vw);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text2);
+  box-shadow: var(--shadow-lg);
+  font-size: 12px;
+  line-height: 1.65;
+  font-weight: 400;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity var(--dur-fast), transform var(--dur-fast);
+  z-index: 80;
+}
+.field-help:hover .field-help-popover,
+.field-help:focus .field-help-popover,
+.field-help:focus-within .field-help-popover {
+  opacity: 1;
+  transform: translateY(0);
+}
 .form-input, .form-select {
   width: 100%; padding: 7px 10px;
   background: var(--bg3); border: 1px solid var(--border);

@@ -58,6 +58,22 @@ func ListAccounts(mgr *TaskManager) ([]AccountVO, error) {
 	return out, nil
 }
 
+func checkDuplicateAccount(req AccountReq) error {
+	var count int64
+	query := db.Model(&AccountPO{}).
+		Where("account_type = ? AND account = ? AND url = ?", req.AccountType, req.Account, req.URL)
+	if req.UID != "" {
+		query = query.Where("uid <> ?", req.UID)
+	}
+	if err := query.Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return fmt.Errorf("同一平台、同一入口下已存在该账号。")
+	}
+	return nil
+}
+
 func AddAccount(req AccountReq) error {
 	if err := ensureDB(); err != nil {
 		return err
@@ -68,10 +84,8 @@ func AddAccount(req AccountReq) error {
 	if req.Password == "" {
 		return fmt.Errorf("密码不能为空")
 	}
-	var count int64
-	db.Model(&AccountPO{}).Where("account_type = ? AND account = ?", req.AccountType, req.Account).Count(&count)
-	if count > 0 {
-		return fmt.Errorf("该账号已存在")
+	if err := checkDuplicateAccount(req); err != nil {
+		return err
 	}
 	uid, _ := uuid.NewV7()
 	ccJSON, _ := json.Marshal(req.CoursesCustom)
@@ -96,6 +110,12 @@ func UpdateAccount(req AccountReq) error {
 	}
 	if req.UID == "" {
 		return fmt.Errorf("UID 不能为空")
+	}
+	if req.Account == "" || req.AccountType == "" {
+		return fmt.Errorf("账号和平台类型不能为空")
+	}
+	if err := checkDuplicateAccount(req); err != nil {
+		return err
 	}
 	updates := map[string]any{
 		"account_type": req.AccountType,
