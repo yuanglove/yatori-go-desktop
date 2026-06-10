@@ -16,7 +16,6 @@ import (
 	icveLogic "yatori-go-console/logic/icve"
 	ketangxLogic "yatori-go-console/logic/ketangx"
 	qsxtLogic "yatori-go-console/logic/qingshuxuetang"
-	welearnLogic "yatori-go-console/logic/welearn"
 )
 
 func fakeConfigData(user consoleConfig.User) *consoleConfig.JSONDataForConfig {
@@ -56,12 +55,7 @@ func RunCqie(setting consoleConfig.Setting, user consoleConfig.User, emit emitFn
 }
 
 func RunWeLearn(setting consoleConfig.Setting, user consoleConfig.User, emit emitFn) {
-	emit("%s", platformLog("WELEARN", user.Account, "开始登录"))
-	users := welearnLogic.FilterAccount(fakeConfigData(user))
-	caches := welearnLogic.UserLoginOperation(users)
-	emit("%s", platformLog("WELEARN", user.Account, "登录成功，开始刷课"))
-	welearnLogic.RunBrushOperation(setting, users, caches)
-	emit("%s", platformLog("WELEARN", user.Account, "任务完成"))
+	RunWeLearnSafe(setting, user, emit)
 }
 
 func RunIcve(setting consoleConfig.Setting, user consoleConfig.User, emit emitFn) {
