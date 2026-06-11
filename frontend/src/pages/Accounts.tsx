@@ -15,6 +15,94 @@ const PLATFORMS = [
   { code: 'HQKJ', name: '海旗科技' }, { code: 'CANGHUI', name: '仓辉实训' },
 ]
 
+interface VideoModeOption { value: number; label: string }
+
+const VIDEO_MODE_OPTIONS: Record<string, VideoModeOption[]> = {
+  XUEXITONG: [
+    { value: 0, label: '0 不刷' },
+    { value: 1, label: '1 普通模式' },
+    { value: 2, label: '2 多课程并发' },
+    { value: 3, label: '3 多任务点并发' },
+  ],
+  YINGHUA: [
+    { value: 0, label: '0 不刷' },
+    { value: 1, label: '1 普通模式' },
+    { value: 2, label: '2 快速模式' },
+    { value: 3, label: '3 去红模式' },
+  ],
+  CANGHUI: [
+    { value: 0, label: '0 不刷' },
+    { value: 1, label: '1 普通模式' },
+    { value: 2, label: '2 快速模式' },
+    { value: 3, label: '3 去红模式' },
+  ],
+  WELEARN: [
+    { value: 0, label: '0 不刷' },
+    { value: 1, label: '1 刷学习时长' },
+    { value: 2, label: '2 刷完成度' },
+  ],
+  HQKJ: [
+    { value: 0, label: '0 不刷' },
+    { value: 1, label: '1 普通模式' },
+    { value: 2, label: '2 快速模式' },
+  ],
+  ENAEA: [
+    { value: 0, label: '0 不刷' },
+    { value: 1, label: '1 普通模式' },
+    { value: 2, label: '2 暴力模式' },
+  ],
+  CQIE: [
+    { value: 0, label: '0 不刷' },
+    { value: 1, label: '1 普通模式' },
+    { value: 2, label: '2 暴力模式（秒刷）' },
+  ],
+  QSXT: [
+    { value: 0, label: '0 不刷' },
+    { value: 1, label: '1 刷学时' },
+  ],
+  ICVE: [
+    { value: 0, label: '0 不刷' },
+    { value: 1, label: '1 普通模式' },
+  ],
+  KETANGX: [
+    { value: 0, label: '0 不刷' },
+    { value: 1, label: '1 普通模式' },
+  ],
+}
+
+const DEFAULT_VIDEO_MODE_OPTIONS: VideoModeOption[] = [
+  { value: 0, label: '0 不刷' },
+  { value: 1, label: '1 普通模式' },
+]
+
+function getVideoModeOptions(platform: string): VideoModeOption[] {
+  return VIDEO_MODE_OPTIONS[platform] ?? DEFAULT_VIDEO_MODE_OPTIONS
+}
+
+const VIDEO_MODE_HINTS: Record<string, string> = {
+  XUEXITONG: '1=普通，2=多课程并发，3=多任务点并发',
+  YINGHUA:   '1=普通，2=快速，3=去红模式（自动处理红色答题标记）',
+  CANGHUI:   '1=普通，2=快速，3=去红模式（自动处理红色答题标记）',
+  WELEARN:   '1=刷学习时长（每60s推进），2=刷完成度（直接标完成）',
+  HQKJ:      '1=普通（逐步推进进度），2=快速（并发秒刷）',
+  ENAEA:     '1=普通，2=暴力模式（强制提交学时）',
+  CQIE:      '1=普通，2=暴力模式（秒刷）',
+  QSXT:      '1=刷学时（仅支持单一模式）',
+  ICVE:      '1=普通模式（仅支持单一模式）',
+  KETANGX:   '1=普通模式（仅支持单一模式）',
+}
+
+function getVideoModeHint(platform: string): string {
+  return VIDEO_MODE_HINTS[platform] ?? ''
+}
+
+/** 切换平台时，若 videoModel 不在新平台支持列表中，返回修正后的默认值（优先1，否则第一个选项） */
+function clampVideoModel(platform: string, current: number): number {
+  const opts = getVideoModeOptions(platform)
+  if (opts.some(o => o.value === current)) return current
+  return opts.find(o => o.value === 1)?.value ?? opts[0].value
+}
+
 const emptyReq = (): AccountReq => ({
   uid: '', accountType: 'YINGHUA', url: '', remarkName: '', account: '',
   password: '', isProxy: 0, informEmails: [], coursesCustom: {
@@ -39,11 +127,13 @@ export default function AccountsPage() {
   const openAdd = () => { setErr(''); setEditing(emptyReq()) }
   const openEdit = (a: AccountVO) => {
     setErr('')
+    const cc = a.coursesCustom
+    const fixedModel = clampVideoModel(a.accountType, cc.videoModel)
     setEditing({
       uid: a.uid, accountType: a.accountType, url: a.url,
       remarkName: a.remarkName ?? '', account: a.account,
       password: '', isProxy: a.isProxy, informEmails: a.informEmails,
-      coursesCustom: a.coursesCustom,
+      coursesCustom: { ...cc, videoModel: fixedModel },
     })
   }
 
@@ -150,7 +240,15 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
               <AnimatedSelect
                 value={req.accountType}
                 options={PLATFORMS.map(p => ({ value: p.code, label: p.name + ' (' + p.code + ')' }))}
-                onChange={v => set('accountType', String(v))}
+                onChange={v => {
+                  const platform = String(v)
+                  const fixedModel = clampVideoModel(platform, req.coursesCustom.videoModel)
+                  onChange({
+                    ...req,
+                    accountType: platform,
+                    coursesCustom: { ...req.coursesCustom, videoModel: fixedModel },
+                  })
+                }}
               />
             </FormGroup>
             <FormGroup label={urlLabel}>
@@ -196,14 +294,14 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
             <FormGroup label="视频模式">
               <AnimatedSelect
                 value={req.coursesCustom.videoModel}
-                options={[
-                  { value: 0, label: '0 不刷' },
-                  { value: 1, label: '1 普通（GUI 可用）' },
-                  { value: 2, label: '2 多课程并发' },
-                  { value: 3, label: '3 多任务点并发' },
-                ]}
+                options={getVideoModeOptions(req.accountType)}
                 onChange={v => setCC('videoModel', Number(v))}
               />
+              {getVideoModeHint(req.accountType) && (
+                <div className="text-muted text-sm" style={{ marginTop: 3 }}>
+                  {getVideoModeHint(req.accountType)}
+                </div>
+              )}
             </FormGroup>
             <FormGroup label="">
               <div className="form-label form-label-row">

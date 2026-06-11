@@ -17,7 +17,15 @@ type CourseVO struct {
 	RawStatusText  string  `json:"rawStatusText,omitempty"`
 }
 
-func GetCourses(uid string) ([]CourseVO, error) {
+func GetCourses(uid string) (vos []CourseVO, retErr error) {
+	// Ensure a panic inside any platform handler never propagates to Wails.
+	defer func() {
+		if r := recover(); r != nil {
+			vos = nil
+			retErr = fmt.Errorf("课程进度拉取时发生内部错误: %v", r)
+		}
+	}()
+
 	if err := InitDB(); err != nil {
 		return nil, fmt.Errorf("数据库初始化失败: %w", err)
 	}

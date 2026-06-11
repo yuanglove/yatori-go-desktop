@@ -195,7 +195,7 @@ func submitWeLearnStudyTime(user consoleConfig.User, cache *welearnAPI.WeLearnUs
 		return
 	}
 
-	for sessionTime < endTime {
+	for {
 		api, err := retryWeLearn(3, 1200*time.Millisecond, func() (string, error) {
 			return cache.KeepPointSessionPlan1Api(course.Cid, point.Id, course.Uid, course.ClassId, sessionTime, totalTime, 3, nil)
 		})
@@ -204,6 +204,9 @@ func submitWeLearnStudyTime(user consoleConfig.User, cache *welearnAPI.WeLearnUs
 			return
 		}
 		emit("%s", formatWeLearnLog(account, course.Name, chapter, item, fmt.Sprintf("学时提交成功：%d/%d 服务器返回：%s", totalTime, endTime, api)))
+		if sessionTime >= endTime {
+			break
+		}
 		sessionTime += 60
 		totalTime += 60
 		time.Sleep(60 * time.Second)
