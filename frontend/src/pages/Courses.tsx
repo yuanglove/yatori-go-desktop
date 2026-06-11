@@ -29,12 +29,15 @@ export default function CoursesPage() {
   const supported = selectedAccount ? SUPPORTED.has(selectedAccount.accountType) : false
 
   const load = async () => {
-    if (!selectedUid) return
+    if (!selectedUid || loading) return
     setLoading(true); setErr('')
-    const r = await api.getCourses(selectedUid).catch(e => ({ ok: false, data: [] as CourseVO[], error: String(e) }))
-    if (r.ok) setCourses(r.data ?? [])
-    else setErr(r.error ?? '请求失败')
-    setLoading(false)
+    try {
+      const r = await api.getCourses(selectedUid).catch(e => ({ ok: false, data: [] as CourseVO[], error: String(e) }))
+      if (r.ok) setCourses(r.data ?? [])
+      else setErr(r.error ?? '请求失败')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const filtered = courses.filter(c => {
