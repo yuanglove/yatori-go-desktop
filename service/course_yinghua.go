@@ -14,7 +14,9 @@ func getYingHuaCourses(po AccountPO) ([]CourseVO, error) {
 	if po.PasswordEnc == "" {
 		return nil, fmt.Errorf("英华密码未保存")
 	}
-	EnsureCoreRuntime()
+	if err := EnsureCoreRuntime(); err != nil {
+		return nil, fmt.Errorf("Core Runtime 初始化失败: %w", err)
+	}
 	cache := &yinghuaApi.YingHuaUserCache{
 		PreUrl:   po.URL,
 		Account:  po.Account,
