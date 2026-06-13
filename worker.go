@@ -108,7 +108,11 @@ func runWorker(uid string) int {
 	// 按平台决定是否初始化 ONNX Runtime
 	if needsCoreRuntime(po.AccountType) {
 		p("初始化 Core Runtime...")
-		service.EnsureCoreRuntime()
+		if err := service.EnsureCoreRuntime(); err != nil {
+			p("Core Runtime 初始化失败: %s", err)
+			p("这通常是 OCR/ONNX 运行环境加载失败。请确认使用完整发布包、不要直接在压缩包内运行，并安装 Microsoft Visual C++ 2015-2022 x64 运行库后重试。")
+			return 1
+		}
 		p("Core Runtime 初始化完成")
 	} else {
 		p("跳过 Core Runtime 初始化：当前平台无需 OCR")
