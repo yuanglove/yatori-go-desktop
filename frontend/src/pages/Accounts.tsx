@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { ExternalLink, Plus, Pencil, Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
 import type { AccountVO, AccountReq, CoursesCustom } from '../lib/api'
 import { useAsync, Confirm, Section, FormGroup, Spinner } from '../components/shared'
@@ -14,6 +14,8 @@ const PLATFORMS = [
   { code: 'ICVE', name: '智慧职教' }, { code: 'QSXT', name: '青书学堂' },
   { code: 'HQKJ', name: '海旗科技' }, { code: 'CANGHUI', name: '仓辉实训' },
 ]
+
+const ICVE_COOKIE_DOC_URL = 'https://yatori-dev.github.io/yatori-docs/yatori-go-console/docs.html'
 
 interface VideoModeOption { value: number; label: string }
 
@@ -142,6 +144,12 @@ export default function AccountsPage() {
     if (editing.accountType === 'YINGHUA' && !editing.url.trim()) {
       setErr('英华平台必须填写学校入口地址（平台 URL）'); return
     }
+    if (editing.accountType === 'ICVE' && !editing.uid && editing.password.trim().length <= 30) {
+      setErr('智慧职教只支持 Cookie 登录，请把浏览器复制的完整 Cookie 填到密码/Cookie 字段'); return
+    }
+    if (editing.accountType === 'ICVE' && editing.uid && editing.password.trim() && editing.password.trim().length <= 30) {
+      setErr('智慧职教只支持 Cookie 登录，若要修改请填写完整 Cookie；不修改请留空'); return
+    }
     setSaving(true); setErr('')
     const r = editing.uid ? await api.updateAccount(editing) : await api.addAccount(editing)
     setSaving(false)
@@ -220,13 +228,37 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
   req: AccountReq; onChange(r: AccountReq): void
   onSave(): void; onClose(): void; saving: boolean; error: string
 }) {
+  const [cookieBusy, setCookieBusy] = useState(false)
+  const [cookieMsg, setCookieMsg] = useState('')
   const set = (k: keyof AccountReq, v: unknown) => onChange({ ...req, [k]: v })
   const setCC = (k: keyof CoursesCustom, v: unknown) =>
     onChange({ ...req, coursesCustom: { ...req.coursesCustom, [k]: v } })
 
   const urlLabel = req.accountType === 'YINGHUA' ? '平台 URL *（英华必填）' : '平台 URL'
   const urlPlaceholder = req.accountType === 'YINGHUA' ? '必填，如 https://xxx.yinghuaxuetang.com' : '部分平台必填'
-  const pwdLabel = req.uid ? '密码（留空保留原密码）' : '密码 *'
+  const pwdLabel = req.accountType === 'ICVE'
+    ? (req.uid ? 'Cookie（留空保留原 Cookie）' : 'Cookie *')
+    : (req.uid ? '密码（留空保留原密码）' : '密码 *')
+  const pwdPlaceholder = req.accountType === 'ICVE'
+    ? (req.uid ? '已保存 Cookie，留空不修改' : '粘贴智慧职教 index 请求里的完整 Cookie')
+    : (req.uid ? '已保存密码，留空不修改' : '')
+  const startICVECookieCapture = async () => {
+    setCookieBusy(true)
+    setCookieMsg('正在打开独立浏览器窗口…')
+    const r = await api.startICVECookieCapture(req.url || 'https://www.icve.com.cn/')
+    setCookieBusy(false)
+    if (!r.ok) { setCookieMsg(r.error ?? '启动失败'); return }
+    setCookieMsg('浏览器已打开。请在该窗口登录智慧职教，登录成功并刷新页面后，回到这里点击“已登录，读取 Cookie”。')
+  }
+  const readICVECookie = async () => {
+    setCookieBusy(true)
+    setCookieMsg('正在读取 Cookie…')
+    const r = await api.readICVECookie()
+    setCookieBusy(false)
+    if (!r.ok) { setCookieMsg(r.error ?? '读取失败'); return }
+    set('password', r.data)
+    setCookieMsg('Cookie 已自动填入，确认账号信息后点击保存。')
+  }
 
   return (
     <div className="modal-overlay">
@@ -260,10 +292,39 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
               <input className="form-input" value={req.account}
                 onChange={e => set('account', e.target.value)} />
             </FormGroup>
-            <FormGroup label={pwdLabel}>
+            <FormGroup label={req.accountType === 'ICVE' ? (
+              <span className="form-label-inline">
+                <span>{pwdLabel}</span>
+                <button
+                  type="button"
+                  className="inline-link-btn"
+                  title="打开智慧职教 Cookie 获取教程"
+                  onClick={() => window.open(ICVE_COOKIE_DOC_URL, '_blank', 'noopener,noreferrer')}
+                >
+                  <ExternalLink size={12} strokeWidth={2.2} />
+                  {'获取教程'}
+                </button>
+              </span>
+            ) : pwdLabel}>
               <input className="form-input" type="password" value={req.password}
-                placeholder={req.uid ? '已保存密码，留空不修改' : ''}
+                placeholder={pwdPlaceholder}
                 onChange={e => set('password', e.target.value)} />
+              {req.accountType === 'ICVE' && (
+                <>
+                  <div className="text-muted text-sm" style={{ marginTop: 3 }}>
+                    {'智慧职教只支持 Cookie 登录：可手动粘贴 Cookie，也可用独立浏览器窗口自动获取。'}
+                  </div>
+                  <div className="flex-row" style={{ marginTop: 8, flexWrap: 'wrap' }}>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={startICVECookieCapture} disabled={cookieBusy}>
+                      {'自动获取 Cookie'}
+                    </button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={readICVECookie} disabled={cookieBusy}>
+                      {'已登录，读取 Cookie'}
+                    </button>
+                  </div>
+                  {cookieMsg && <div className="alert alert-info" style={{ marginTop: 8, fontSize: 12 }}>{cookieMsg}</div>}
+                </>
+              )}
             </FormGroup>
             <FormGroup label="备注名">
               <input className="form-input" value={req.remarkName}

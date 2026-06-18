@@ -4,6 +4,7 @@ go 1.24.11
 
 require (
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	github.com/wailsapp/wails/v2 v2.12.0
 	github.com/yatori-dev/yatori-go-core v1.9.1-0.20260513153113-72595587190d
@@ -27,7 +28,6 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect

@@ -69,6 +69,8 @@ export const api = {
   testAIConfig:       ():                Promise<StringResult>          => c(App.TestAIConfig()),
   checkForUpdates:    (v: string):       Promise<UpdateResult>          => c(App.CheckForUpdates(v)),
   openURL:            (url: string):     Promise<BoolResult>            => c(App.OpenURL(url)),
+  startICVECookieCapture: (url: string): Promise<StringResult>          => c(App.StartICVECookieCapture(url)),
+  readICVECookie:     ():                Promise<StringResult>          => c(App.ReadICVECookie()),
   getCourses:         (uid: string):     Promise<CourseListResult>      => c(App.GetCourses(uid)),
 }
 

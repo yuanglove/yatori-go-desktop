@@ -42,6 +42,8 @@ func GetCourses(uid string) (vos []CourseVO, retErr error) {
 		return getHqkjCourses(po)
 	case "WELEARN":
 		return getWeLearnCourses(po)
+	case "ICVE":
+		return getICVECourses(po)
 	default:
 		return nil, fmt.Errorf("暂不支持 %s 平台课程进度拉取", po.AccountType)
 	}

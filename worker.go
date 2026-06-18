@@ -24,7 +24,7 @@ func workerLog(format string, args ...interface{}) string {
 // needsCoreRuntime 判断平台是否需要初始化 ONNX Runtime（OCR）
 func needsCoreRuntime(platform string) bool {
 	switch platform {
-	case "YINGHUA", "CANGHUI", "XUEXITONG", "CQIE", "QSXT", "ICVE":
+	case "YINGHUA", "CANGHUI", "XUEXITONG", "CQIE", "QSXT":
 		return true
 	default:
 		return false

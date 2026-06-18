@@ -62,8 +62,16 @@ export function OpenURL(arg1) {
   return window['go']['main']['App']['OpenURL'](arg1);
 }
 
+export function ReadICVECookie() {
+  return window['go']['main']['App']['ReadICVECookie']();
+}
+
 export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
+}
+
+export function StartICVECookieCapture(arg1) {
+  return window['go']['main']['App']['StartICVECookieCapture'](arg1);
 }
 
 export function StartTask(arg1) {

@@ -82,6 +82,7 @@ type App struct {
 	taskMgr    *service.TaskManager
 	logHub     *service.LogHub
 	configPath string
+	icveCookie *service.ICVECookieCapture
 }
 
 func NewApp() *App { return &App{} }
@@ -89,6 +90,7 @@ func NewApp() *App { return &App{} }
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.logHub = service.NewLogHub()
+	a.icveCookie = service.NewICVECookieCapture()
 	// 拦截 os.Stdout：把原核心 lg.Print 输出桥接到 LogHub + Wails Events
 	a.logHub.HijackStdout(func(line string) {
 		clean := service.ToUTF8(service.StripANSI(line))
@@ -113,7 +115,12 @@ func (a *App) startup(ctx context.Context) {
 	_ = service.InitDB()
 }
 
-func (a *App) shutdown(_ context.Context) { a.taskMgr.StopAll() }
+func (a *App) shutdown(_ context.Context) {
+	a.taskMgr.StopAll()
+	if a.icveCookie != nil {
+		a.icveCookie.Stop()
+	}
+}
 
 // --- 配置 ---
 
@@ -300,6 +307,28 @@ func (a *App) OpenURL(url string) BoolResult {
 	return BoolResult{Ok: true}
 }
 
+func (a *App) StartICVECookieCapture(url string) StringResult {
+	if a.icveCookie == nil {
+		a.icveCookie = service.NewICVECookieCapture()
+	}
+	opened, err := a.icveCookie.Start(url)
+	if err != nil {
+		return StringResult{Error: err.Error()}
+	}
+	return StringResult{Ok: true, Data: opened}
+}
+
+func (a *App) ReadICVECookie() StringResult {
+	if a.icveCookie == nil {
+		return StringResult{Error: "自动获取 Cookie 流程尚未启动"}
+	}
+	cookie, err := a.icveCookie.ReadCookie()
+	if err != nil {
+		return StringResult{Error: err.Error()}
+	}
+	return StringResult{Ok: true, Data: cookie}
+}
+
 type CourseListResult struct {
 	Ok    bool               `json:"ok"`
 	Data  []service.CourseVO `json:"data"`
@@ -323,7 +352,7 @@ func (a *App) GetCourses(uid string) CourseListResult {
 			return CourseListResult{Error: r.err.Error()}
 		}
 		return CourseListResult{Ok: true, Data: r.data}
-	case <-time.After(45 * time.Second):
+	case <-time.After(75 * time.Second):
 		return CourseListResult{Error: "课程进度拉取超时，请稍后重试"}
 	}
 }
