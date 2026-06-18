@@ -4,11 +4,29 @@ import type { CourseVO, AccountVO } from '../lib/api'
 import { Spinner, EmptyState } from '../components/shared'
 import AnimatedSelect from '../components/AnimatedSelect'
 
-const SUPPORTED = new Set(['XUEXITONG', 'YINGHUA', 'HQKJ', 'WELEARN'])
+const SUPPORTED = new Set(['XUEXITONG', 'YINGHUA', 'HQKJ', 'WELEARN', 'ICVE'])
 
 function isCourseComplete(c: CourseVO): boolean {
   if (c.jobCount > 0 && c.jobFinishCount >= c.jobCount) return true
   return c.hasProgress && c.jobRate >= 100
+}
+
+function getCourseTaskText(c: CourseVO): string {
+  if (c.platform === 'ICVE') {
+    if (c.jobCount > 0) return `${c.jobFinishCount}/${c.jobCount}`
+    return '课程已获取，任务点待同步'
+  }
+  if (c.jobCount > 0) {
+    return `${c.jobFinishCount}/${c.jobCount}`
+  }
+  return c.hasProgress ? '未返回' : (c.rawStatusText || '—')
+}
+
+function getCourseProgressText(c: CourseVO): string {
+  if (c.platform === 'ICVE' && c.jobCount === 0) {
+    return c.rawStatusText ? '待同步' : '暂无进度'
+  }
+  return c.hasProgress ? `${c.jobRate.toFixed(0)}%` : '暂无进度'
 }
 
 export default function CoursesPage() {
@@ -112,7 +130,7 @@ export default function CoursesPage() {
             <thead>
               <tr>
                 <th>平台</th>
-                <th>课程名称</th>
+                <th style={{ minWidth: 210 }}>课程名称</th>
                 <th>任课老师</th>
                 <th>任务</th>
                 <th>状态</th>
@@ -126,22 +144,22 @@ export default function CoursesPage() {
                   <td><span className="badge badge-config" style={{ fontSize: 10 }}>{c.platform || '—'}</span></td>
                   <td style={{ fontWeight: 500 }}>{c.courseName || '—'}</td>
                   <td className="text-muted">{c.courseTeacher || '—'}</td>
-                  <td className="text-muted">
-                    {c.jobCount > 0
-                      ? `${c.jobFinishCount}/${c.jobCount}`
-                      : (c.hasProgress ? '未返回' : (c.rawStatusText || '—'))}
-                  </td>
+                  <td className="text-muted">{getCourseTaskText(c)}</td>
                   <td>
                     {isCourseComplete(c)
                       ? <span className="badge badge-stopped">已完成</span>
                       : !c.isStart
                       ? <span className="badge badge-stopped">未开课</span>
+                      : c.platform === 'ICVE' && c.jobCount === 0
+                        ? <span className="badge badge-pending">待同步</span>
                       : c.state === 1
                         ? <span className="badge badge-stopped">已结课</span>
                         : <span className="badge badge-running">进行中</span>}
                   </td>
                   <td>
-                    {c.hasProgress ? (
+                    {c.platform === 'ICVE' && c.jobCount === 0 ? (
+                      <span className="text-muted text-sm">{getCourseProgressText(c)}</span>
+                    ) : c.hasProgress ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div className="progress-bar-track">
                           <div
@@ -156,7 +174,7 @@ export default function CoursesPage() {
                           fontWeight: 600,
                           color: c.jobRate >= 100 ? 'var(--success)' : 'var(--text2)',
                         }}>
-                          {c.jobRate.toFixed(0)}%
+                          {getCourseProgressText(c)}
                         </span>
                       </div>
                     ) : <span className="text-muted text-sm">暂无进度</span>}

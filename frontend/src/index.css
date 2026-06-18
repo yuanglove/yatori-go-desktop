@@ -379,6 +379,31 @@ html[data-theme="graphite"] body::after {
   justify-content: space-between;
   gap: 8px;
 }
+.form-label-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.inline-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border: 1px solid var(--border2);
+  border-radius: 999px;
+  background: var(--bg3);
+  color: var(--accent);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: border-color var(--dur-fast), background var(--dur-fast), transform var(--dur-fast);
+}
+.inline-link-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  transform: translateY(-1px);
+}
 .field-help {
   position: relative;
   display: inline-flex;
@@ -483,6 +508,7 @@ html[data-theme="graphite"] body::after {
 .badge-failed  { background: var(--badge-failed-bg);  color: var(--danger); }
 .badge-full    { background: var(--accent-dim);        color: var(--accent); }
 .badge-config  { background: var(--warn-dim);          color: var(--warn); }
+.badge-pending { background: var(--badge-stopped-bg);  color: var(--text2); }
 .badge-none    { background: var(--badge-stopped-bg);  color: var(--text3); }
 
 .segmented-control {

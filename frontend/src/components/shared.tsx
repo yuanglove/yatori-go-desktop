@@ -77,7 +77,7 @@ export function Section({ title, children, action }: { title: string; children: 
   )
 }
 
-export function FormGroup({ label, children }: { label: string; children: ReactNode }) {
+export function FormGroup({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div className="form-group">
       {label && <label className="form-label">{label}</label>}

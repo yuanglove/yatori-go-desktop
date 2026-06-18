@@ -33,7 +33,11 @@ export function OpenDataDir():Promise<main.BoolResult>;
 
 export function OpenURL(arg1:string):Promise<main.BoolResult>;
 
+export function ReadICVECookie():Promise<main.StringResult>;
+
 export function SaveConfig(arg1:service.AppConfig):Promise<main.BoolResult>;
+
+export function StartICVECookieCapture(arg1:string):Promise<main.StringResult>;
 
 export function StartTask(arg1:string):Promise<main.BoolResult>;
 

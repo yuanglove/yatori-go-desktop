@@ -25,7 +25,7 @@ func PlatformSupportList() []PlatformInfo {
 		{Code: "WELEARN", Name: "WeLearn 随行课堂", GUISupport: "full",
 			Note: "支持视频 VideoModel 1/2，worker 子进程运行"},
 		{Code: "ICVE", Name: "智慧职教", GUISupport: "full",
-			Note: "支持账号/Cookie 登录，VideoModel 1，worker 子进程运行"},
+			Note: "仅支持 Cookie 登录，VideoModel 1，worker 子进程运行"},
 		{Code: "HQKJ", Name: "海旗科技", GUISupport: "full",
 			Note: "支持视频 VideoModel 1/2，worker 子进程运行"},
 		{Code: "KETANGX", Name: "码上研训", GUISupport: "full",
