@@ -8,6 +8,7 @@ WORKDIR /src/yatori-go-desktop
 COPY . .
 
 ENV CGO_ENABLED=1
+ENV PATH="/usr/local/go/bin:${PATH}"
 
-CMD ["bash", "-lc", "go test ./service/... -v"]
+CMD ["bash", "-lc", "/usr/local/go/bin/go test ./service/... -v"]
 
