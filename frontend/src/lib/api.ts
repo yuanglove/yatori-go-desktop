@@ -6,7 +6,12 @@ export interface AppConfig {
     basicSetting:  { completionTone:number; colorLog:number; logOutFileSw:number; logLevel:string; logModel:number; webModel:number; theme?:string; maxWorkers?:number }
     emailInform:   { sw:number; smtpHost:string; smtpPort:number; userName:string; password:string }
     aiSetting:     { aiType:string; aiUrl:string; model:string; apiKey:string }
-    apiQueSetting: { url:string }
+    apiQueSetting: {
+      url:string; protocol?:string; token?:string; tokenParam?:string; authType?:string
+      method?:string; contentType?:string; questionField?:string; typeField?:string
+      optionsField?:string; courseNameField?:string; optionsFormat?:string; typeMap?:string
+      answerPath?:string; answerSplit?:string
+    }
   }
   users: User[]
 }
@@ -67,6 +72,7 @@ export const api = {
   getRecentLogs:      (n: number):       Promise<StringListResult>      => c(App.GetRecentLogs(n)),
   getPlatformSupport: ():                Promise<PlatformListResult>    => c(App.GetPlatformSupport()),
   testAIConfig:       ():                Promise<StringResult>          => c(App.TestAIConfig()),
+  testQuestionBankConfig: ():            Promise<StringResult>          => c(App.TestQuestionBankConfig()),
   checkForUpdates:    (v: string):       Promise<UpdateResult>          => c(App.CheckForUpdates(v)),
   openURL:            (url: string):     Promise<BoolResult>            => c(App.OpenURL(url)),
   startICVECookieCapture: (url: string): Promise<StringResult>          => c(App.StartICVECookieCapture(url)),

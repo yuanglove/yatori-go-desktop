@@ -93,6 +93,7 @@ func runWorker(uid string) int {
 	if setting.BasicSetting.LogLevel == "" {
 		setting.BasicSetting.LogLevel = "INFO"
 	}
+	service.SetRuntimeQuestionBankSetting(cfg.Setting.ApiQueSetting)
 	p("日志配置: level=%s model=%d file=%d", setting.BasicSetting.LogLevel, setting.BasicSetting.LogModel, setting.BasicSetting.LogOutFileSw)
 
 	user := service.BuildUserFromPO(po)

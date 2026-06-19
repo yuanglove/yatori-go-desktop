@@ -493,6 +493,20 @@ export namespace service {
 	}
 	export class ApiQueSetting {
 	    url: string;
+	    protocol?: string;
+	    token?: string;
+	    tokenParam?: string;
+	    authType?: string;
+	    method?: string;
+	    contentType?: string;
+	    questionField?: string;
+	    typeField?: string;
+	    optionsField?: string;
+	    courseNameField?: string;
+	    optionsFormat?: string;
+	    typeMap?: string;
+	    answerPath?: string;
+	    answerSplit?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ApiQueSetting(source);
@@ -501,6 +515,20 @@ export namespace service {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.url = source["url"];
+	        this.protocol = source["protocol"];
+	        this.token = source["token"];
+	        this.tokenParam = source["tokenParam"];
+	        this.authType = source["authType"];
+	        this.method = source["method"];
+	        this.contentType = source["contentType"];
+	        this.questionField = source["questionField"];
+	        this.typeField = source["typeField"];
+	        this.optionsField = source["optionsField"];
+	        this.courseNameField = source["courseNameField"];
+	        this.optionsFormat = source["optionsFormat"];
+	        this.typeMap = source["typeMap"];
+	        this.answerPath = source["answerPath"];
+	        this.answerSplit = source["answerSplit"];
 	    }
 	}
 	export class User {

@@ -21,7 +21,6 @@ import (
 	xuexitong "github.com/yatori-dev/yatori-go-core/aggregation/xuexitong"
 	xuexitongApi "github.com/yatori-dev/yatori-go-core/api/xuexitong"
 	aiq "github.com/yatori-dev/yatori-go-core/que-core/aiq"
-	external "github.com/yatori-dev/yatori-go-core/que-core/external"
 	"io"
 	"net/http"
 	consoleConfig "yatori-go-console/config"
@@ -558,8 +557,8 @@ func safeRunWorkAndExam(ctx context.Context, setting consoleConfig.Setting,
 			return
 		}
 	} else if user.CoursesCustom.AutoExam == 2 {
-		if err := external.CheckApiQueRequest(setting.ApiQueSetting.Url, 5, nil); err != nil {
-			xlog("", "外挂题库不可用: "+err.Error())
+		if !hasExternalQuestionBank(setting) {
+			xlog("", "外部题库未配置，跳过作业/考试自动答题")
 			return
 		}
 	}
@@ -635,7 +634,7 @@ func safeWorkAction(ctx context.Context, setting consoleConfig.Setting,
 				xlog("AI回答作业失败: " + err3.Error())
 			}
 		case 2:
-			question.WriteQuestionForExternalAction(setting.ApiQueSetting.Url)
+			answerExternalWorkQuestion(setting, &question, course.CourseName, xlog)
 		case 3:
 			if err3 := question.WriteQuestionForXXTAIAction(cache, question.ClassId, question.CourseId, question.Cpi); err3 != nil {
 				xlog("内置AI回答作业失败: " + err3.Error())
@@ -677,7 +676,7 @@ func safeExamAction(ctx context.Context, setting consoleConfig.Setting,
 				xlog("AI回答考试失败: " + err3.Error())
 			}
 		case 2:
-			question.WriteQuestionForExternalAction(setting.ApiQueSetting.Url)
+			answerExternalExamQuestion(setting, &question, course.CourseName, xlog)
 		case 3:
 			if err3 := question.WriteQuestionForXXTAIAction(cache, question.ClassId, question.CourseId, question.Cpi); err3 != nil {
 				xlog("内置AI回答考试失败: " + err3.Error())
@@ -706,6 +705,125 @@ func hasAIConfig(setting consoleConfig.Setting) bool {
 // hasExternalQuestionBank 判断外部题库是否配置
 func hasExternalQuestionBank(setting consoleConfig.Setting) bool {
 	return strings.TrimSpace(setting.ApiQueSetting.Url) != ""
+}
+
+func queryExternalQuestion(setting consoleConfig.Setting, q QuestionBankQuestion, pfx func(string)) []string {
+	qb := GetRuntimeQuestionBankSetting(setting.ApiQueSetting.Url)
+	result, err := QueryQuestionBank(qb, q)
+	if err != nil {
+		if pfx != nil {
+			pfx("外部题库获取答案失败: " + err.Error())
+		}
+		return nil
+	}
+	return result.Answers
+}
+
+func answerExternalChoice(setting consoleConfig.Setting, q *xuexitongApi.ChoiceQue, courseName string, pfx func(string)) bool {
+	answers := queryExternalQuestion(setting, QuestionBankQuestion{
+		Type:       q.Type.String(),
+		Content:    q.Text,
+		OptionsMap: q.Options,
+		CourseName: courseName,
+	}, pfx)
+	answers = normalizeChoiceAnswers(*q, answers, pfx)
+	if len(answers) == 0 {
+		return false
+	}
+	q.SetAnswers(answers)
+	return true
+}
+
+func answerExternalJudge(setting consoleConfig.Setting, q *xuexitongApi.JudgeQue, courseName string, pfx func(string)) bool {
+	answers := queryExternalQuestion(setting, QuestionBankQuestion{
+		Type:       q.Type.String(),
+		Content:    q.Text,
+		OptionsMap: q.Options,
+		CourseName: courseName,
+	}, pfx)
+	answers = normalizeJudgeAnswers(answers, pfx)
+	if len(answers) == 0 {
+		return false
+	}
+	q.SetAnswers(answers)
+	return true
+}
+
+func answerExternalSetter(setting consoleConfig.Setting, setter interface{ SetAnswers([]string) }, typeName, content string, options []string, courseName string, pfx func(string)) bool {
+	answers := queryExternalQuestion(setting, QuestionBankQuestion{
+		Type:       typeName,
+		Content:    content,
+		Options:    options,
+		CourseName: courseName,
+	}, pfx)
+	if len(answers) == 0 {
+		return false
+	}
+	setter.SetAnswers(answers)
+	return true
+}
+
+func answerExternalWorkQuestion(setting consoleConfig.Setting, q *xuexitong.XXTWorkQuestion, courseName string, pfx func(string)) bool {
+	answers := queryExternalQuestion(setting, QuestionBankQuestion{
+		Type:       q.Question.Type,
+		Content:    q.Question.Content,
+		Options:    q.Question.Options,
+		CourseName: courseName,
+	}, pfx)
+	if len(answers) == 0 {
+		return false
+	}
+	q.Question.Answers = answers
+	return true
+}
+
+func answerExternalExamQuestion(setting consoleConfig.Setting, q *xuexitong.XXTExamQuestion, courseName string, pfx func(string)) bool {
+	answers := queryExternalQuestion(setting, QuestionBankQuestion{
+		Type:       q.Question.Type,
+		Content:    q.Question.Content,
+		Options:    q.Question.Options,
+		CourseName: courseName,
+	}, pfx)
+	if len(answers) == 0 {
+		return false
+	}
+	q.Question.Answers = answers
+	return true
+}
+
+func answerWorkOrExamExternal(setting consoleConfig.Setting, qa xuexitongApi.Question, courseName string, pfx func(string)) {
+	for i := range qa.Choice {
+		_ = answerExternalChoice(setting, &qa.Choice[i], courseName, pfx)
+	}
+	for i := range qa.Judge {
+		_ = answerExternalJudge(setting, &qa.Judge[i], courseName, pfx)
+	}
+	for i := range qa.Fill {
+		q := &qa.Fill[i]
+		_ = answerExternalSetter(setting, q, q.Type.String(), q.Text, nil, courseName, pfx)
+	}
+	for i := range qa.Short {
+		q := &qa.Short[i]
+		_ = answerExternalSetter(setting, q, q.Type.String(), q.Text, nil, courseName, pfx)
+	}
+	for i := range qa.TermExplanation {
+		q := &qa.TermExplanation[i]
+		_ = answerExternalSetter(setting, q, q.Type.String(), q.Text, nil, courseName, pfx)
+	}
+	for i := range qa.Essay {
+		q := &qa.Essay[i]
+		_ = answerExternalSetter(setting, q, q.Type.String(), q.Text, nil, courseName, pfx)
+	}
+	for i := range qa.Matching {
+		q := &qa.Matching[i]
+		options := append([]string{}, q.Options...)
+		options = append(options, q.Selects...)
+		_ = answerExternalSetter(setting, q, q.Type.String(), q.Text, options, courseName, pfx)
+	}
+	for i := range qa.Other {
+		q := &qa.Other[i]
+		_ = answerExternalSetter(setting, q, q.Type.String(), q.Text, nil, courseName, pfx)
+	}
 }
 
 // randomChoiceAnswer 从选择题选项中随机选一个，返回答案列表、日志描述、是否成功
@@ -859,7 +977,7 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 			})
 		case 2:
 			answerQ(func() {
-				q.AnswerExternalGet(setting.ApiQueSetting.Url)
+				answerExternalChoice(setting, q, course.CourseName, pfx)
 				if len(q.Answers) > 0 {
 					answered++
 					gotAnswer = true
@@ -905,7 +1023,7 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 			})
 		case 2:
 			answerQ(func() {
-				q.AnswerExternalGet(setting.ApiQueSetting.Url)
+				answerExternalJudge(setting, q, course.CourseName, pfx)
 				if len(q.Answers) > 0 {
 					answered++
 					gotAnswer = true
@@ -945,7 +1063,7 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 			})
 		case 2:
 			answerQ(func() {
-				q.AnswerExternalGet(setting.ApiQueSetting.Url)
+				answerExternalSetter(setting, q, q.Type.String(), q.Text, nil, course.CourseName, pfx)
 				if len(q.OpFromAnswer) > 0 {
 					answered++
 				}
@@ -974,7 +1092,7 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 			})
 		case 2:
 			answerQ(func() {
-				q.AnswerExternalGet(setting.ApiQueSetting.Url)
+				answerExternalSetter(setting, q, q.Type.String(), q.Text, nil, course.CourseName, pfx)
 				if len(q.OpFromAnswer) > 0 {
 					answered++
 				}
@@ -1003,7 +1121,7 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 			})
 		case 2:
 			answerQ(func() {
-				q.AnswerExternalGet(setting.ApiQueSetting.Url)
+				answerExternalSetter(setting, q, q.Type.String(), q.Text, nil, course.CourseName, pfx)
 				if len(q.OpFromAnswer) > 0 {
 					answered++
 				}
@@ -1032,7 +1150,7 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 			})
 		case 2:
 			answerQ(func() {
-				q.AnswerExternalGet(setting.ApiQueSetting.Url)
+				answerExternalSetter(setting, q, q.Type.String(), q.Text, nil, course.CourseName, pfx)
 				if len(q.OpFromAnswer) > 0 {
 					answered++
 				}
@@ -1058,7 +1176,9 @@ func safeChapterTestAction(ctx context.Context, setting consoleConfig.Setting,
 			})
 		case 2:
 			answerQ(func() {
-				q.AnswerExternalGet(setting.ApiQueSetting.Url)
+				options := append([]string{}, q.Options...)
+				options = append(options, q.Selects...)
+				answerExternalSetter(setting, q, q.Type.String(), q.Text, options, course.CourseName, pfx)
 				if len(q.Answers) > 0 {
 					answered++
 				}

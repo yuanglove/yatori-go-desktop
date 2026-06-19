@@ -47,4 +47,6 @@ export function TailLogFile(arg1:number):Promise<main.StringListResult>;
 
 export function TestAIConfig():Promise<main.StringResult>;
 
+export function TestQuestionBankConfig():Promise<main.StringResult>;
+
 export function UpdateAccount(arg1:service.AccountReq):Promise<main.BoolResult>;

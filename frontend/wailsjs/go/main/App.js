@@ -90,6 +90,10 @@ export function TestAIConfig() {
   return window['go']['main']['App']['TestAIConfig']();
 }
 
+export function TestQuestionBankConfig() {
+  return window['go']['main']['App']['TestQuestionBankConfig']();
+}
+
 export function UpdateAccount(arg1) {
   return window['go']['main']['App']['UpdateAccount'](arg1);
 }

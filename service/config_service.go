@@ -49,7 +49,21 @@ type AiSetting struct {
 }
 
 type ApiQueSetting struct {
-	Url string `yaml:"url" json:"url"`
+	Url             string `yaml:"url" json:"url"`
+	Protocol        string `yaml:"protocol,omitempty" json:"protocol,omitempty"`
+	Token           string `yaml:"token,omitempty" json:"token,omitempty"`
+	TokenParam      string `yaml:"tokenParam,omitempty" json:"tokenParam,omitempty"`
+	AuthType        string `yaml:"authType,omitempty" json:"authType,omitempty"`
+	Method          string `yaml:"method,omitempty" json:"method,omitempty"`
+	ContentType     string `yaml:"contentType,omitempty" json:"contentType,omitempty"`
+	QuestionField   string `yaml:"questionField,omitempty" json:"questionField,omitempty"`
+	TypeField       string `yaml:"typeField,omitempty" json:"typeField,omitempty"`
+	OptionsField    string `yaml:"optionsField,omitempty" json:"optionsField,omitempty"`
+	CourseNameField string `yaml:"courseNameField,omitempty" json:"courseNameField,omitempty"`
+	OptionsFormat   string `yaml:"optionsFormat,omitempty" json:"optionsFormat,omitempty"`
+	TypeMap         string `yaml:"typeMap,omitempty" json:"typeMap,omitempty"`
+	AnswerPath      string `yaml:"answerPath,omitempty" json:"answerPath,omitempty"`
+	AnswerSplit     string `yaml:"answerSplit,omitempty" json:"answerSplit,omitempty"`
 }
 
 type User struct {
@@ -153,7 +167,7 @@ func defaultConfig() AppConfig {
 				WebModel:       0,
 				MaxWorkers:     3,
 			},
-			ApiQueSetting: ApiQueSetting{Url: "http://localhost:8083"},
+			ApiQueSetting: ApiQueSetting{Url: "http://localhost:8083", Protocol: "yatori", Method: "POST", ContentType: "json", AuthType: "none", QuestionField: "content", TypeField: "type", OptionsField: "options", CourseNameField: "courseName", OptionsFormat: "array", AnswerPath: "question.answers", AnswerSplit: "#"},
 			AiSetting:     AiSetting{AiType: "TONGYI"},
 		},
 	}
@@ -165,6 +179,42 @@ func applyDefaults(cfg *AppConfig) {
 	}
 	if cfg.Setting.ApiQueSetting.Url == "" {
 		cfg.Setting.ApiQueSetting.Url = "http://localhost:8083"
+	}
+	if cfg.Setting.ApiQueSetting.Protocol == "" {
+		cfg.Setting.ApiQueSetting.Protocol = "yatori"
+	}
+	if cfg.Setting.ApiQueSetting.Method == "" {
+		cfg.Setting.ApiQueSetting.Method = "POST"
+	}
+	if cfg.Setting.ApiQueSetting.AuthType == "" {
+		cfg.Setting.ApiQueSetting.AuthType = "none"
+	}
+	if cfg.Setting.ApiQueSetting.ContentType == "" {
+		cfg.Setting.ApiQueSetting.ContentType = "json"
+	}
+	if cfg.Setting.ApiQueSetting.QuestionField == "" {
+		cfg.Setting.ApiQueSetting.QuestionField = "content"
+	}
+	if cfg.Setting.ApiQueSetting.TypeField == "" {
+		cfg.Setting.ApiQueSetting.TypeField = "type"
+	}
+	if cfg.Setting.ApiQueSetting.OptionsField == "" {
+		cfg.Setting.ApiQueSetting.OptionsField = "options"
+	}
+	if cfg.Setting.ApiQueSetting.CourseNameField == "" {
+		cfg.Setting.ApiQueSetting.CourseNameField = "courseName"
+	}
+	if cfg.Setting.ApiQueSetting.OptionsFormat == "" {
+		cfg.Setting.ApiQueSetting.OptionsFormat = "array"
+	}
+	if cfg.Setting.ApiQueSetting.TokenParam == "" {
+		cfg.Setting.ApiQueSetting.TokenParam = "token"
+	}
+	if cfg.Setting.ApiQueSetting.AnswerPath == "" {
+		cfg.Setting.ApiQueSetting.AnswerPath = "question.answers"
+	}
+	if cfg.Setting.ApiQueSetting.AnswerSplit == "" {
+		cfg.Setting.ApiQueSetting.AnswerSplit = "#"
 	}
 	if cfg.Setting.BasicSetting.MaxWorkers <= 0 {
 		cfg.Setting.BasicSetting.MaxWorkers = 3
