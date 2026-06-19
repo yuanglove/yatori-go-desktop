@@ -12,8 +12,9 @@
   "info": {
     "companyName": "yatori-dev",
     "productName": "Yatori 学习管理工具",
-    "productVersion": "0.3.4",
+    "productVersion": "0.3.5",
     "copyright": "yatori-dev",
     "comments": "合规学习任务管理桌面工具"
   }
 }
+

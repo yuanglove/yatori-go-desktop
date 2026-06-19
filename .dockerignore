@@ -1,0 +1,8 @@
+.git
+build/bin
+frontend/node_modules
+frontend/dist
+_backups
+*.exe
+*.tar
+*.zip

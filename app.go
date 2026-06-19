@@ -290,6 +290,18 @@ func (a *App) TestAIConfig() StringResult {
 	return StringResult{Ok: true, Data: result}
 }
 
+func (a *App) TestQuestionBankConfig() StringResult {
+	cfg, err := service.LoadConfig(a.configPath)
+	if err != nil {
+		return StringResult{Error: "读取配置失败: " + err.Error()}
+	}
+	result, testErr := service.TestQuestionBank(cfg.Setting.ApiQueSetting)
+	if testErr != nil {
+		return StringResult{Error: testErr.Error()}
+	}
+	return StringResult{Ok: true, Data: result}
+}
+
 // --- 平台 ---
 
 func (a *App) GetPlatformSupport() PlatformListResult {
