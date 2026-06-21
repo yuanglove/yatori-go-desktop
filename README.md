@@ -8,7 +8,7 @@ Yatori Go Desktop 是基于 [yatori-dev/yatori-go-console](https://github.com/ya
 
 ## 当前版本
 
-v0.3.5
+v0.3.7
 
 ## 本项目做了什么
 

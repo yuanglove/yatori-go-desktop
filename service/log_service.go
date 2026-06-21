@@ -114,6 +114,10 @@ func NormalizeLogText(s string) string {
 		if fixed := fixMojibake(s); fixed != s {
 			return fixed
 		}
+		// CJK 字符被 GBK 误解码为其他 CJK 字符（UTF-8→GBK→UTF-8）
+		if fixed := fixGBKasMojibake(s); fixed != s {
+			return applyResidualMojibakeMap(fixed)
+		}
 		return s
 	}
 
@@ -149,6 +153,52 @@ func fixMojibake(s string) string {
 	out, _, err := transform.String(simplifiedchinese.GBK.NewDecoder(), string(raw))
 	if err == nil && utf8.ValidString(out) && hasCJK(out) {
 		return out
+	}
+	return s
+}
+
+// fixGBKasMojibake 修复 UTF-8 字节被当 GBK 解码后产生的乱码。
+// 逐段处理 CJK 字符，尝试 GBK 编码后作为 UTF-8 解码。
+func fixGBKasMojibake(s string) string {
+	runes := []rune(s)
+	var result strings.Builder
+	changed := false
+	i := 0
+	for i < len(runes) {
+		r := runes[i]
+		if r < 0x4E00 || r > 0x9FFF {
+			result.WriteRune(r)
+			i++
+			continue
+		}
+		j := i
+		for j < len(runes) && runes[j] >= 0x4E00 && runes[j] <= 0x9FFF {
+			j++
+		}
+		chunk := string(runes[i:j])
+		gbkBytes, _, err := transform.String(simplifiedchinese.GBK.NewEncoder(), chunk)
+		if err == nil && utf8.ValidString(gbkBytes) && hasCJK(gbkBytes) && gbkBytes != chunk {
+			result.WriteString(gbkBytes)
+			changed = true
+		} else {
+			result.WriteString(chunk)
+		}
+		i = j
+	}
+	if !changed {
+		return s
+	}
+	return result.String()
+}
+
+// applyResidualMojibakeMap 修复 fixGBKasMojibake 后残留的已知乱码词。
+var residualMojibakeMap = map[string]string{
+	"缁统": "系统",
+}
+
+func applyResidualMojibakeMap(s string) string {
+	for bad, good := range residualMojibakeMap {
+		s = strings.ReplaceAll(s, bad, good)
 	}
 	return s
 }
@@ -217,3 +267,6 @@ func tailFile(path string, n int) ([]string, error) {
 	}
 	return lines, scanner.Err()
 }
+
+func fixUTF8AsGBKMojibake(s string) string { return fixMojibake(s) }
+func normalizeLogText(s string) string      { return NormalizeLogText(s) }

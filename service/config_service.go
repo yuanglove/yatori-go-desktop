@@ -119,6 +119,7 @@ func LoadConfig(path string) (AppConfig, error) {
 }
 
 func SaveConfig(path string, cfg AppConfig) error {
+	applyDefaults(&cfg)
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("序列化配置失败: %w", err)
@@ -216,6 +217,7 @@ func applyDefaults(cfg *AppConfig) {
 	if cfg.Setting.ApiQueSetting.AnswerSplit == "" {
 		cfg.Setting.ApiQueSetting.AnswerSplit = "#"
 	}
+	cfg.Setting.ApiQueSetting = normalizeQuestionBankSetting(cfg.Setting.ApiQueSetting)
 	if cfg.Setting.BasicSetting.MaxWorkers <= 0 {
 		cfg.Setting.BasicSetting.MaxWorkers = 3
 	}

@@ -79,3 +79,39 @@ func TestApplyBearerAuth(t *testing.T) {
 		t.Fatalf("bearer token should not be written to body: %v", payload)
 	}
 }
+
+func TestNormalizeQuestionBankInfersXHWLFromURL(t *testing.T) {
+	setting := normalizeQuestionBankSetting(ApiQueSetting{
+		Url:           "https://api.tiku.xhwlgzs.cn/v1/questions/search",
+		Protocol:      "yatori",
+		AuthType:      "none",
+		TokenParam:    "token",
+		QuestionField: "content",
+		AnswerPath:    "question.answers",
+	})
+	if setting.Protocol != "xhwlgzs" {
+		t.Fatalf("protocol=%q want xhwlgzs", setting.Protocol)
+	}
+	if setting.AuthType != "bearer" {
+		t.Fatalf("authType=%q want bearer", setting.AuthType)
+	}
+	if setting.TokenParam != "Authorization" {
+		t.Fatalf("tokenParam=%q want Authorization", setting.TokenParam)
+	}
+	if setting.QuestionField != "value" {
+		t.Fatalf("questionField=%q want value", setting.QuestionField)
+	}
+	if setting.AnswerPath != "data.answer" {
+		t.Fatalf("answerPath=%q want data.answer", setting.AnswerPath)
+	}
+}
+
+func TestNormalizeQuestionBankRewritesXHWLGenerateURL(t *testing.T) {
+	setting := normalizeQuestionBankSetting(ApiQueSetting{
+		Url:      "https://api.tiku.xhwlgzs.cn/v1/questions/generate",
+		Protocol: "yatori",
+	})
+	if setting.Url != "https://api.tiku.xhwlgzs.cn/v1/questions/search" {
+		t.Fatalf("url=%q want search endpoint", setting.Url)
+	}
+}

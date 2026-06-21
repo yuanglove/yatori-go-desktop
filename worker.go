@@ -188,21 +188,29 @@ func runWorker(uid string) int {
 	case "WELEARN":
 		service.RunWeLearn(setting, user, emit)
 	case "ICVE":
-		service.RunIcve(setting, user, emit)
+		randFail := 0
+		submitThreshold := 60
+		var ccIcve service.CoursesCustom
+		if json.Unmarshal([]byte(po.CoursesCustom), &ccIcve) == nil {
+			randFail = ccIcve.RandomAnswerOnFail
+			if ccIcve.SubmitThresholdPercent > 0 {
+				submitThreshold = ccIcve.SubmitThresholdPercent
+			}
+		}
+		service.RunIcveWithCourseOpts(setting, user, randFail, submitThreshold, emit)
 	case "HQKJ":
 		service.RunHqkj(setting, user, emit)
 	case "KETANGX":
 		service.RunKetangx(setting, user, emit)
 
 	default:
-		p("平台 %s 暂不支持 worker 模式", po.AccountType)
-		return 1
+		p("平台 %s 暂不支持，跳过", po.AccountType)
 	}
 
 	if runErr != nil {
 		p("任务失败: %s", runErr)
 		return 1
 	}
-	p("任务完成")
+	p("所有任务完成")
 	return 0
 }

@@ -38,6 +38,11 @@ type cdpCookie struct {
 	Path   string `json:"path"`
 }
 
+type browserSessionData struct {
+	Cookies []cdpCookie
+	Storage map[string]string
+}
+
 type cdpResponse struct {
 	ID     int             `json:"id"`
 	Result json.RawMessage `json:"result"`
@@ -79,7 +84,7 @@ func (c *ICVECookieCapture) Start(loginURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	profileDir := filepath.Join(dataDir, "icve-cookie-browser")
+	profileDir := filepath.Join(dataDir, "icve-cookie-browser", time.Now().Format("20060102150405"))
 	if err := os.MkdirAll(profileDir, 0755); err != nil {
 		return "", fmt.Errorf("创建临时浏览器目录失败: %w", err)
 	}
@@ -113,15 +118,19 @@ func (c *ICVECookieCapture) ReadCookie() (string, error) {
 		return "", fmt.Errorf("尚未启动自动获取 Cookie 流程")
 	}
 
-	cookies, err := readChromeCookies(port)
+	session, err := readChromeSession(port)
 	if err != nil {
 		return "", err
 	}
+	cookies := normalizeICVECookies(session.Cookies, session.Storage)
 	if len(cookies) == 0 {
 		return "", fmt.Errorf("未读取到 Cookie，请确认已在打开的浏览器窗口中完成登录并刷新页面")
 	}
 
 	sort.SliceStable(cookies, func(i, j int) bool {
+		if cookieNamePriority(cookies[i].Name) != cookieNamePriority(cookies[j].Name) {
+			return cookieNamePriority(cookies[i].Name) < cookieNamePriority(cookies[j].Name)
+		}
 		if cookies[i].Domain == cookies[j].Domain {
 			return cookies[i].Name < cookies[j].Name
 		}
@@ -131,15 +140,19 @@ func (c *ICVECookieCapture) ReadCookie() (string, error) {
 	seen := map[string]bool{}
 	for _, ck := range cookies {
 		name := strings.TrimSpace(ck.Name)
-		if name == "" || seen[name] {
+		if name == "" {
 			continue
 		}
-		seen[name] = true
+		key := strings.ToLower(name + "|" + ck.Domain + "|" + ck.Path)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
 		parts = append(parts, name+"="+ck.Value)
 	}
 	cookieText := strings.Join(parts, "; ")
-	if !strings.Contains(cookieText, "token=") {
-		return "", fmt.Errorf("未检测到 token Cookie，请确认智慧职教已登录成功")
+	if !hasCookieName(cookies, "token") {
+		return "", fmt.Errorf("未检测到 token Cookie，请确认智慧职教已登录成功；如果刚登录完成，请先刷新一次页面再读取")
 	}
 	return cookieText, nil
 }
@@ -189,21 +202,31 @@ func freeTCPPort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-func readChromeCookies(port int) ([]cdpCookie, error) {
+func readChromeSession(port int) (browserSessionData, error) {
 	target, err := waitForChromeTarget(port, 15*time.Second)
 	if err != nil {
-		return nil, err
+		return browserSessionData{}, err
 	}
 	ws, _, err := websocket.DefaultDialer.Dial(target.WebSocketDebuggerURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("连接浏览器调试会话失败: %w", err)
+		return browserSessionData{}, fmt.Errorf("连接浏览器调试会话失败: %w", err)
 	}
 	defer ws.Close()
 
+	data := browserSessionData{Storage: map[string]string{}}
 	if cookies, err := callGetCookies(ws, "Network.getAllCookies"); err == nil {
-		return cookies, nil
+		data.Cookies = cookies
+	} else {
+		cookies, fallbackErr := callGetCookies(ws, "Storage.getCookies")
+		if fallbackErr != nil {
+			return browserSessionData{}, err
+		}
+		data.Cookies = cookies
 	}
-	return callGetCookies(ws, "Storage.getCookies")
+	if storage, err := callReadStorage(ws); err == nil {
+		data.Storage = storage
+	}
+	return data, nil
 }
 
 func waitForChromeTarget(port int, timeout time.Duration) (chromeTarget, error) {
@@ -267,5 +290,113 @@ func callGetCookies(ws *websocket.Conn, method string) ([]cdpCookie, error) {
 			return nil, err
 		}
 		return result.Cookies, nil
+	}
+}
+
+func callReadStorage(ws *websocket.Conn) (map[string]string, error) {
+	expr := `(() => {
+		const out = {};
+		for (const storeName of ['localStorage', 'sessionStorage']) {
+			try {
+				const store = window[storeName];
+				for (let i = 0; i < store.length; i++) {
+					const key = store.key(i);
+					out[storeName + '.' + key] = store.getItem(key);
+				}
+			} catch (_) {}
+		}
+		return out;
+	})()`
+	if err := ws.WriteJSON(map[string]any{
+		"id":     2,
+		"method": "Runtime.evaluate",
+		"params": map[string]any{
+			"expression":    expr,
+			"returnByValue": true,
+		},
+	}); err != nil {
+		return nil, err
+	}
+	for {
+		var resp cdpResponse
+		if err := ws.ReadJSON(&resp); err != nil {
+			return nil, err
+		}
+		if resp.ID != 2 {
+			continue
+		}
+		if resp.Error != nil {
+			return nil, fmt.Errorf("Runtime.evaluate: %s", resp.Error.Message)
+		}
+		var result struct {
+			Result struct {
+				Value map[string]string `json:"value"`
+			} `json:"result"`
+		}
+		if err := json.Unmarshal(resp.Result, &result); err != nil {
+			return nil, err
+		}
+		if result.Result.Value == nil {
+			return map[string]string{}, nil
+		}
+		return result.Result.Value, nil
+	}
+}
+
+func normalizeICVECookies(cookies []cdpCookie, storage map[string]string) []cdpCookie {
+	out := make([]cdpCookie, 0, len(cookies)+2)
+	for _, ck := range cookies {
+		if !isICVERelatedCookie(ck) {
+			continue
+		}
+		out = append(out, ck)
+	}
+	for _, name := range []string{"token", "zhzj-Token"} {
+		if hasCookieName(out, name) {
+			continue
+		}
+		if value := findStorageToken(storage, name); value != "" {
+			out = append(out, cdpCookie{Name: name, Value: value, Domain: ".icve.com.cn", Path: "/"})
+		}
+	}
+	return out
+}
+
+func isICVERelatedCookie(ck cdpCookie) bool {
+	domain := strings.ToLower(strings.TrimSpace(ck.Domain))
+	return domain == "" || strings.Contains(domain, "icve.com.cn")
+}
+
+func hasCookieName(cookies []cdpCookie, name string) bool {
+	for _, ck := range cookies {
+		if strings.EqualFold(strings.TrimSpace(ck.Name), name) && strings.TrimSpace(ck.Value) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func findStorageToken(storage map[string]string, want string) string {
+	want = strings.ToLower(want)
+	for key, value := range storage {
+		if strings.TrimSpace(value) == "" {
+			continue
+		}
+		k := strings.ToLower(key)
+		if strings.HasSuffix(k, "."+want) || strings.HasSuffix(k, "_"+want) || strings.HasSuffix(k, "-"+want) || k == want {
+			return value
+		}
+	}
+	return ""
+}
+
+func cookieNamePriority(name string) int {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "token":
+		return 90
+	case "zhzj-token":
+		return 91
+	default:
+		return 10
 	}
 }
