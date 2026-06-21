@@ -7,6 +7,7 @@ type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR'
 
 const LOG_LEVELS: LogLevel[] = ['DEBUG', 'INFO', 'WARN', 'ERROR']
 const LOG_LEVEL_STORAGE_KEY = 'yatori-log-center-level'
+const LOG_HISTORY_LIMIT = 10000
 const LEVEL_WEIGHT: Record<LogLevel, number> = {
   DEBUG: 0,
   INFO: 1,
@@ -42,9 +43,9 @@ export default function LogsPage() {
         if (LOG_LEVELS.includes(cfgLevel as LogLevel)) setLevel(cfgLevel as LogLevel)
       })
     }
-    api.getRecentLogs(300).then(r => { if (r.ok && r.data.length) setLines(r.data.map(stripANSI)) })
+    api.getRecentLogs(LOG_HISTORY_LIMIT).then(r => { if (r.ok && r.data.length) setLines(r.data.map(stripANSI)) })
     const off = onAnyLog(item => {
-      setLines(prev => [...prev.slice(-600), stripANSI(item.msg)])
+      setLines(prev => [...prev.slice(-(LOG_HISTORY_LIMIT - 1)), stripANSI(item.msg)])
     })
     return off
   }, [])
@@ -67,7 +68,7 @@ export default function LogsPage() {
   const cls = (line: string) => `log-line log-${detectLevel(line)}`
 
   const reload = async () => {
-    const r = await api.getRecentLogs(300)
+    const r = await api.getRecentLogs(LOG_HISTORY_LIMIT)
     if (r.ok) setLines(r.data.map(stripANSI))
   }
 

@@ -63,8 +63,8 @@ const VIDEO_MODE_OPTIONS: Record<string, VideoModeOption[]> = {
     { value: 1, label: '1 刷学时' },
   ],
   ICVE: [
-    { value: 0, label: '0 不刷' },
-    { value: 1, label: '1 普通模式' },
+    { value: 0, label: '0 不刷视频' },
+    { value: 1, label: '1 默认秒刷' },
   ],
   KETANGX: [
     { value: 0, label: '0 不刷' },
@@ -90,7 +90,7 @@ const VIDEO_MODE_HINTS: Record<string, string> = {
   ENAEA:     '1=普通，2=暴力模式（强制提交学时）',
   CQIE:      '1=普通，2=暴力模式（秒刷）',
   QSXT:      '1=刷学时（仅支持单一模式）',
-  ICVE:      '1=普通模式（仅支持单一模式）',
+  ICVE:      '0=不刷视频但仍处理章节测验/文档等任务点，1=默认秒刷',
   KETANGX:   '1=普通模式（仅支持单一模式）',
 }
 
@@ -248,7 +248,7 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
     const r = await api.startICVECookieCapture(req.url || 'https://www.icve.com.cn/')
     setCookieBusy(false)
     if (!r.ok) { setCookieMsg(r.error ?? '启动失败'); return }
-    setCookieMsg('浏览器已打开。请在该窗口登录智慧职教，登录成功并刷新页面后，回到这里点击“已登录，读取 Cookie”。')
+    setCookieMsg('浏览器已打开。请在该窗口登录智慧职教，登录成功后进入课程/首页并刷新一次，再回到这里点击“已登录，读取 Cookie”。')
   }
   const readICVECookie = async () => {
     setCookieBusy(true)
@@ -257,7 +257,7 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
     setCookieBusy(false)
     if (!r.ok) { setCookieMsg(r.error ?? '读取失败'); return }
     set('password', r.data)
-    setCookieMsg('Cookie 已自动填入，确认账号信息后点击保存。')
+    setCookieMsg('Cookie 已自动填入，确认账号信息后点击保存。若启动任务提示 Cookie 失效，请重新获取一次。')
   }
 
   return (
@@ -396,8 +396,8 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
               <AnimatedSelect
                 value={req.coursesCustom.examAutoSubmit}
                 options={[
-                  { value: 0, label: '0 不提交' },
-                  { value: 1, label: '1 提交' },
+                  { value: 0, label: '0 保存不提交' },
+                  { value: 1, label: '1 直接提交' },
                   { value: 2, label: '2 智能提交' },
                 ]}
                 onChange={v => setCC('examAutoSubmit', Number(v))}
@@ -460,7 +460,7 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 onChange={v => setCC('randomAnswerOnFail', Number(v))}
               />
               <div className="text-muted text-sm" style={{ marginTop: 3 }}>
-                {'仅在 AI/题库无有效答案时生效；只随机选择题和判断题。'}
+                {'仅在 AI/题库无有效答案时生效；随机选择题、多选题和判断题，填空/简答/论述不随机。'}
               </div>
             </FormGroup>
           </div>

@@ -9,6 +9,7 @@ import { applyTheme } from '../lib/theme'
 import { PROJECT_RELEASES_URL } from '../lib/version'
 import { fetchAnnouncement, isAnnouncementRead, type AnnouncementData } from '../lib/announcement'
 import AnnouncementModal from './AnnouncementModal'
+import appLogo from '../assets/app-logo-circle.png'
 
 const links = [
   { to: '/',         label: '仪表盘',   Icon: LayoutDashboard },
@@ -52,8 +53,11 @@ export default function Layout() {
     <div className="layout">
       <nav className="nav">
         <div className="nav-logo">
-          <div className="nav-logo-title">{'Yatori'}</div>
-          <small>{'学习管理工具'}</small>
+          <img className="nav-logo-avatar" src={appLogo} alt="" aria-hidden="true" />
+          <div className="nav-logo-copy">
+            <div className="nav-logo-title">{'Yatori'}</div>
+            <small>{'学习管理工具'}</small>
+          </div>
         </div>
         <div className="nav-links">
           {links.map(({ to, label, Icon }) => (

@@ -21,10 +21,11 @@ export function useLogStream(uid: string) {
   const [lines, setLines] = useState<string[]>([])
   const ref = useRef<HTMLDivElement>(null)
   const paused = useRef(false)
+  const limit = 10000
   useEffect(() => {
-    api.tailLog(200).then(r => { if (r.ok) setLines(r.data) })
+    api.tailLog(limit).then(r => { if (r.ok) setLines(r.data) })
     const off = onTaskLog(uid, (msg: string) => {
-      setLines(prev => [...prev.slice(-500), msg])
+      setLines(prev => [...prev.slice(-(limit - 1)), msg])
       if (!paused.current && ref.current)
         ref.current.scrollTop = ref.current.scrollHeight
     })

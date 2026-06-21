@@ -302,9 +302,6 @@ func normalizeICVESpeed(speed float64, isLook bool) float64 {
 	if speed > 0 {
 		return speed
 	}
-	if isLook {
-		return 100
-	}
 	return 0
 }
 
@@ -364,6 +361,8 @@ func icveGET(cache *icveApi.IcveUserCache, urlStr string, timeout time.Duration)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Host", "zyk.icve.com.cn")
 	req.Header.Add("Connection", "keep-alive")
+	req.Header.Add("Referer", "https://zyk.icve.com.cn/")
+	req.Header.Add("Origin", "https://zyk.icve.com.cn")
 	req.Header.Add("Authorization", "Bearer "+cache.ZYKAccessToken)
 	for _, cookie := range cache.Cookies {
 		req.AddCookie(cookie)

@@ -82,6 +82,10 @@ func RunIcve(setting consoleConfig.Setting, user consoleConfig.User, emit emitFn
 	emit("%s", platformLog("ICVE", user.Account, "任务完成"))
 }
 
+func RunIcveWithCourseOpts(setting consoleConfig.Setting, user consoleConfig.User, randomAnswerOnFail int, submitThresholdPercent int, emit emitFn) {
+	RunIcveSafe(setting, user, randomAnswerOnFail, submitThresholdPercent, emit)
+}
+
 func RunHqkj(setting consoleConfig.Setting, user consoleConfig.User, emit emitFn) {
 	emit("%s", platformLog("HQKJ", user.Account, "开始登录"))
 	users := hqkjLogic.FilterAccount(fakeConfigData(user))

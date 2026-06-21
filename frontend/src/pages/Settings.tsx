@@ -40,6 +40,18 @@ function isPresetQuestionBankUrl(url: string) {
   return value === '' || QUESTION_BANK_PRESET_URLS.includes(value)
 }
 
+function presetForQuestionBankUrl(raw: string) {
+  try {
+    const host = new URL(raw.trim()).host.toLowerCase()
+    if (host === 'api.tiku.xhwlgzs.cn') return QUESTION_BANK_PRESETS.find(p => p.value === 'xhwlgzs')
+    if (host === 'tk.wanjuantiku.com') return QUESTION_BANK_PRESETS.find(p => p.value === 'wanjuan')
+    if (host === 'api.zaizhexue.top') return QUESTION_BANK_PRESETS.find(p => p.value === 'zerror')
+  } catch {
+    return undefined
+  }
+  return undefined
+}
+
 type OCSAnswererConfig = {
   name?: string
   url?: string
@@ -166,6 +178,37 @@ export default function SettingsPage() {
     })
   }
 
+  const setQuestionBankURL = (url: string) => {
+    const preset = presetForQuestionBankUrl(url)
+    if (!preset) {
+      setQuestionBank('url', url)
+      return
+    }
+    setCfg({
+      ...cfg,
+      setting: {
+        ...cfg.setting,
+        apiQueSetting: {
+          ...cfg.setting.apiQueSetting,
+          protocol: preset.value,
+          url: preset.url,
+          method: preset.method,
+          contentType: preset.contentType,
+          tokenParam: preset.tokenParam,
+          authType: preset.authType,
+          questionField: preset.questionField,
+          typeField: preset.typeField,
+          optionsField: preset.optionsField,
+          courseNameField: preset.courseNameField,
+          optionsFormat: preset.optionsFormat,
+          typeMap: preset.typeMap,
+          answerPath: preset.answerPath,
+          answerSplit: preset.answerSplit,
+        },
+      },
+    })
+  }
+
   const save = async () => {
     setSaving(true); setMsgText('')
     const r = await api.saveConfig(cfg)
@@ -254,6 +297,10 @@ export default function SettingsPage() {
   const siliconUrlLooksWrong =
     cfg.setting.aiSetting.aiType === 'SILICON' &&
     cfg.setting.aiSetting.aiUrl.includes('cloud.siliconflow')
+  const questionBankNeedsToken =
+    ['wanjuan', 'zerror', 'xhwlgzs', 'ocs'].includes(cfg.setting.apiQueSetting.protocol || '') &&
+    (cfg.setting.apiQueSetting.authType || 'none') !== 'none' &&
+    !(cfg.setting.apiQueSetting.token || '').trim()
 
   return (
     <div className="page">
@@ -442,11 +489,16 @@ export default function SettingsPage() {
           </FormGroup>
           <FormGroup label="题库接口 URL">
             <input className="form-input" value={cfg.setting.apiQueSetting.url}
-              onChange={e => setQuestionBank('url', e.target.value)} />
+              onChange={e => setQuestionBankURL(e.target.value)} />
           </FormGroup>
           <FormGroup label="Token / Key">
             <input className="form-input" type="password" value={cfg.setting.apiQueSetting.token || ''}
               onChange={e => setQuestionBank('token', e.target.value)} />
+            {questionBankNeedsToken && (
+              <div className="alert alert-warn" style={{ marginTop: 6, fontSize: 12 }}>
+                {'当前题库需要 Token / Key。未填写时接口会返回 401，外部题库不会生效。'}
+              </div>
+            )}
           </FormGroup>
         </div>
 

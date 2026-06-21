@@ -131,6 +131,15 @@ func normalizeQuestionBankSetting(setting ApiQueSetting) ApiQueSetting {
 	setting.TypeMap = strings.TrimSpace(setting.TypeMap)
 	setting.AnswerPath = strings.TrimSpace(setting.AnswerPath)
 	setting.AnswerSplit = strings.TrimSpace(setting.AnswerSplit)
+	// 从 URL 自动识别 xhwlgzs 协议，重置用户填写的 yatori 默认值
+	if strings.Contains(setting.Url, "xhwlgzs.cn") && strings.EqualFold(setting.Protocol, "yatori") {
+		setting.Protocol = "xhwlgzs"
+		setting.Url = strings.Replace(setting.Url, "/questions/generate", "/questions/search", 1)
+		setting.AuthType = ""
+		setting.TokenParam = ""
+		setting.QuestionField = ""
+		setting.AnswerPath = ""
+	}
 	if setting.Protocol == "" {
 		setting.Protocol = "yatori"
 	}
