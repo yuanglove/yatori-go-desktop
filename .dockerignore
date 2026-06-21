@@ -6,3 +6,16 @@ _backups
 *.exe
 *.tar
 *.zip
+.codex*
+.gocache*
+.gotmp*
+.appdata
+.codex-appdata
+release
+docs
+*.out
+*.cmd
+*.err
+*.tmp
+service/*.bak
+service/*.backup
