@@ -11,4 +11,3 @@ ENV CGO_ENABLED=1
 ENV PATH="/usr/local/go/bin:${PATH}"
 
 CMD ["bash", "-lc", "/usr/local/go/bin/go test ./service/... -v"]
-
