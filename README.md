@@ -5,6 +5,10 @@ Yatori Go Desktop 是基于 [yatori-dev/yatori-go-console](https://github.com/ya
 原项目提供命令行和网页模式的学习任务执行能力。本项目在其基础上增加 Wails 桌面 GUI、账号管理、任务控制、日志中心、课程进度、全局设置、主题切换、公告、版本检测和题库配置等能力，让主要操作可以通过窗口完成。
 
 > 本项目由 [yatori-dev/yatori-go-console](https://github.com/yatori-dev/yatori-go-console) 改造而来。感谢原项目作者和相关开源依赖。
+> <img width="1782" height="1161" alt="image" src="https://github.com/user-attachments/assets/f33e531f-581c-49d1-91d4-9164d1be8b28" />
+> <img width="1782" height="1161" alt="image" src="https://github.com/user-attachments/assets/648fbdff-c5da-456f-961f-81510bd47806" />
+
+
 
 ## 当前版本
 
