@@ -1,6 +1,6 @@
 module yatori-go-desktop
 
-go 1.24.11
+go 1.25.0
 
 require (
 	github.com/google/uuid v1.6.0
@@ -8,7 +8,7 @@ require (
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	github.com/wailsapp/wails/v2 v2.12.0
 	github.com/yatori-dev/yatori-go-core v1.9.1-0.20260513153113-72595587190d
-	golang.org/x/text v0.32.0
+	golang.org/x/text v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
@@ -60,12 +60,18 @@ require (
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/yalue/onnxruntime_go v1.24.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/image v0.34.0 // indirect
-	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/crypto v0.53.0 // indirect
+	golang.org/x/image v0.42.0 // indirect
+	golang.org/x/mobile v0.0.0-20260611195102-4dd8f1dbf5d2 // indirect
+	golang.org/x/mod v0.37.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/tools v0.46.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
 )
 
 replace yatori-go-console => ../yatori-go-console
+
+tool golang.org/x/mobile/cmd/gobind

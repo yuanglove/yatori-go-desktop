@@ -3,10 +3,32 @@ package service
 import (
 	"os"
 	"path/filepath"
+	"sync"
 )
 
-// DataDir 返回用户数据目录：%APPDATA%/yatori-go-console
+var dataDirOverride struct {
+	sync.RWMutex
+	path string
+}
+
+// SetDataDir 覆盖默认用户数据目录，供 Android/mobilecore 使用。
+func SetDataDir(path string) {
+	dataDirOverride.Lock()
+	dataDirOverride.path = path
+	dataDirOverride.Unlock()
+}
+
+// DataDir 返回用户数据目录：%APPDATA%/yatori-go-console，或 mobilecore 设置的目录。
 func DataDir() (string, error) {
+	dataDirOverride.RLock()
+	override := dataDirOverride.path
+	dataDirOverride.RUnlock()
+	if override != "" {
+		if err := os.MkdirAll(override, 0755); err != nil {
+			return "", err
+		}
+		return override, nil
+	}
 	appData := os.Getenv("APPDATA")
 	if appData == "" {
 		home, err := os.UserHomeDir()

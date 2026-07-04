@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/uuid"
 	"errors"
+
+	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func encodePassword(plain string) string {
@@ -141,6 +143,51 @@ func DeleteAccount(uid string) error {
 		return err
 	}
 	return db.Where("uid = ?", uid).Delete(&AccountPO{}).Error
+}
+
+type AccountImportSummary struct {
+	Imported int `json:"imported"`
+	Updated  int `json:"updated"`
+	Skipped  int `json:"skipped"`
+}
+
+func ImportAccountPOs(rows []AccountPO) (AccountImportSummary, error) {
+	var summary AccountImportSummary
+	if err := ensureDB(); err != nil {
+		return summary, err
+	}
+	for _, row := range rows {
+		if row.UID == "" || row.Account == "" || row.AccountType == "" {
+			summary.Skipped++
+			continue
+		}
+		var existing AccountPO
+		err := db.Where("uid = ?", row.UID).First(&existing).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&row).Error; err != nil {
+				return summary, err
+			}
+			summary.Imported++
+			continue
+		}
+		if err != nil {
+			return summary, err
+		}
+		if err := db.Model(&AccountPO{}).Where("uid = ?", row.UID).Updates(map[string]any{
+			"account_type":   row.AccountType,
+			"url":            row.URL,
+			"remark_name":    row.RemarkName,
+			"account":        row.Account,
+			"password_enc":   row.PasswordEnc,
+			"is_proxy":       row.IsProxy,
+			"inform_emails":  row.InformEmails,
+			"courses_custom": row.CoursesCustom,
+		}).Error; err != nil {
+			return summary, err
+		}
+		summary.Updated++
+	}
+	return summary, nil
 }
 
 // GetAccountPO 供 worker 子进程使用（已导出）
