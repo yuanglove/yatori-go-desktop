@@ -2,16 +2,58 @@ node_modules/
 frontend/node_modules/
 frontend/dist/
 build/bin/
+
+# Local build and release artifacts
 *.exe
+*.tar
+*.zip
+*.tmp
+*.out
+*.err
+release/
+
+# Runtime data and logs
 *.db
 *.log
-*.bak
 config.yaml
 yatori.db
 assets/log/
+last-run.log
+worker/*.log
+
+# Local Go/CGo scratch output
+.gocache*/
+.gotmp*/
+.codex-go-*/
+.codex-cgo-*.log
+.codex-gccwrap.cmd
+.codex-gccwrap.log
+.cgo-check.c
+cgo-*.out
+cgo-*.err
+go-build-*.out
+go-test-*.out
+gcc-*.out
+
+# Codex/local app state
+.agents/
+.appdata/
+.codex-appdata/
+.codex-localappdata/
+
+# Reverse-engineering scratch files kept out of source history.
+# Move curated notes into docs/debug instead.
+icve-cdn-*.js
+
+# Editor/system files
 .DS_Store
 .vscode/
 .vs/
 .idea/
-last-run.log
-worker/*.log
+
+# Manual backup fragments
+*.bak
+*.backup
+service/*.bak
+service/*.backup
+service/*.go.[0-9]*

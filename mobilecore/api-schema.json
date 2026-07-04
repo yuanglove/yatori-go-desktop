@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "responseEnvelope": {
+    "success": {
+      "ok": true,
+      "data": {},
+      "error": "",
+      "code": ""
+    },
+    "failure": {
+      "ok": false,
+      "data": null,
+      "error": "error message",
+      "code": "ERROR_CODE"
+    }
+  },
+  "methods": [
+    {
+      "name": "Init",
+      "params": [{ "name": "dataDir", "type": "string" }],
+      "returns": "InitInfo"
+    },
+    {
+      "name": "GetCapabilities",
+      "params": [],
+      "returns": "CapabilityInfo"
+    },
+    {
+      "name": "GetCoreVersionJSON",
+      "params": [],
+      "returns": "CoreVersionInfo"
+    },
+    {
+      "name": "GetConfigJSON",
+      "params": [],
+      "returns": "object"
+    },
+    {
+      "name": "SaveConfigJSON",
+      "params": [{ "name": "configJSON", "type": "string" }],
+      "returns": "string"
+    },
+    {
+      "name": "ImportConfigText",
+      "params": [{ "name": "text", "type": "string" }],
+      "returns": "object"
+    },
+    {
+      "name": "ListAccountsJSON",
+      "params": [],
+      "returns": "Account[]"
+    },
+    {
+      "name": "AddAccountJSON",
+      "params": [{ "name": "accountJSON", "type": "string" }],
+      "returns": "string"
+    },
+    {
+      "name": "UpdateAccountJSON",
+      "params": [{ "name": "accountJSON", "type": "string" }],
+      "returns": "string"
+    },
+    {
+      "name": "DeleteAccount",
+      "params": [{ "name": "uid", "type": "string" }],
+      "returns": "string"
+    },
+    {
+      "name": "ExportAccountsDBBase64",
+      "params": [],
+      "returns": "{fileName,mimeType,base64}"
+    },
+    {
+      "name": "ImportAccountsDBBase64",
+      "params": [{ "name": "base64", "type": "string" }],
+      "returns": "{imported,updated,skipped}"
+    },
+    {
+      "name": "GetCoursesJSON",
+      "params": [{ "name": "uid", "type": "string" }],
+      "returns": "Course[]"
+    },
+    {
+      "name": "StartTask",
+      "params": [{ "name": "uid", "type": "string" }],
+      "returns": "string"
+    },
+    {
+      "name": "StopTask",
+      "params": [{ "name": "uid", "type": "string" }],
+      "returns": "string"
+    },
+    {
+      "name": "GetTaskStatusesJSON",
+      "params": [],
+      "returns": "TaskStatus[]"
+    },
+    {
+      "name": "GetRecentLogsJSON",
+      "params": [{ "name": "limit", "type": "int64" }],
+      "returns": "string[]"
+    },
+    {
+      "name": "TestAIJSON",
+      "params": [],
+      "returns": "string"
+    },
+    {
+      "name": "TestQuestionBankJSON",
+      "params": [],
+      "returns": "string"
+    }
+  ],
+  "errorCodes": [
+    "CORE_NOT_INITIALIZED",
+    "INVALID_ARGUMENT",
+    "UNSUPPORTED",
+    "INTERNAL_ERROR"
+  ]
+}
