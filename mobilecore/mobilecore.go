@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	CoreVersion      = "0.3.8"
+	CoreVersion      = "0.3.9"
 	APISchemaVersion = 1
 )
 
@@ -401,6 +401,37 @@ func GetRecentLogsJSON(limit int64) string {
 	return ok(cp)
 }
 
+func ListXXTExamCodeRequestsJSON() string {
+	if err := ensureInitialized(); err != nil {
+		return fail(CodeNotInitialized, err.Error())
+	}
+	list, err := service.ListPendingXXTExamCodeRequests()
+	if err != nil {
+		return fail(CodeInternalError, err.Error())
+	}
+	return ok(list)
+}
+
+func AnswerXXTExamCodeRequest(id, code string) string {
+	if err := ensureInitialized(); err != nil {
+		return fail(CodeNotInitialized, err.Error())
+	}
+	if err := service.AnswerXXTExamCodeRequest(id, code); err != nil {
+		return fail(CodeInvalidArgument, err.Error())
+	}
+	return ok("ok")
+}
+
+func CancelXXTExamCodeRequest(id string) string {
+	if err := ensureInitialized(); err != nil {
+		return fail(CodeNotInitialized, err.Error())
+	}
+	if err := service.CancelXXTExamCodeRequest(id); err != nil {
+		return fail(CodeInvalidArgument, err.Error())
+	}
+	return ok("ok")
+}
+
 func TestAIJSON() string {
 	if err := ensureInitialized(); err != nil {
 		return fail(CodeNotInitialized, err.Error())
@@ -500,8 +531,8 @@ func runMobileTask(ctx context.Context, po service.AccountPO) {
 			runErr = fmt.Errorf("invalid XUEXITONG cache")
 			break
 		}
-		submitThreshold, randomAnswerOnFail := courseAnswerOptions(po)
-		runErr = service.SafeRun(ctx, setting, &user, xxtCache, submitThreshold, randomAnswerOnFail, emit)
+		examOptions := courseExamOptions(po)
+		runErr = service.SafeRunWithExamOptions(ctx, setting, &user, xxtCache, examOptions, emit)
 	case "YINGHUA", "CANGHUI":
 		yhCache := &yinghuaApiPkg.YingHuaUserCache{
 			PreUrl:   po.URL,
@@ -572,7 +603,7 @@ func buildConsoleSetting(cfg service.AppConfig) consoleConfig.Setting {
 	}
 }
 
-func courseAnswerOptions(po service.AccountPO) (int, int) {
+func courseExamOptions(po service.AccountPO) service.XXTExamOptions {
 	submitThreshold := 100
 	randomAnswerOnFail := 0
 	var cc service.CoursesCustom
@@ -582,7 +613,14 @@ func courseAnswerOptions(po service.AccountPO) (int, int) {
 		}
 		randomAnswerOnFail = cc.RandomAnswerOnFail
 	}
-	return submitThreshold, randomAnswerOnFail
+	return service.XXTExamOptions{
+		SubmitThreshold:    submitThreshold,
+		RandomAnswerOnFail: randomAnswerOnFail,
+		AutoExamCode:       0,
+		ExamCodes:          nil,
+		AccountUID:         po.UID,
+		AccountName:        po.Account,
+	}
 }
 
 func icveOptions(po service.AccountPO) (int, int) {

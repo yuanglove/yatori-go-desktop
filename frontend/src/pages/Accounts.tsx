@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { ExternalLink, Plus, Pencil, Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
 import type { AccountVO, AccountReq, CoursesCustom } from '../lib/api'
@@ -275,10 +275,11 @@ function AccountModal({ req, onChange, onSave, onClose, saving, error }: {
                 onChange={v => {
                   const platform = String(v)
                   const fixedModel = clampVideoModel(platform, req.coursesCustom.videoModel)
+                  const nextCC = { ...req.coursesCustom, videoModel: fixedModel }
                   onChange({
                     ...req,
                     accountType: platform,
-                    coursesCustom: { ...req.coursesCustom, videoModel: fixedModel },
+                    coursesCustom: nextCC,
                   })
                 }}
               />

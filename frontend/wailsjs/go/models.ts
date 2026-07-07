@@ -302,6 +302,40 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class XXTExamCodeRequestListResult {
+	    ok: boolean;
+	    data: service.XXTExamCodeRequest[];
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new XXTExamCodeRequestListResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.data = this.convertValues(source["data"], service.XXTExamCodeRequest);
+	        this.error = source["error"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 
 }
 
@@ -335,6 +369,8 @@ export namespace service {
 	    examAutoSubmit: number;
 	    submitThresholdPercent?: number;
 	    randomAnswerOnFail?: number;
+	    xxtAutoExamCode?: number;
+	    xxtExamCodes?: Record<string, string>;
 	    excludeCourses: string[];
 	    includeCourses: string[];
 	    coursesSettings?: CourseSettings[];
@@ -356,6 +392,8 @@ export namespace service {
 	        this.examAutoSubmit = source["examAutoSubmit"];
 	        this.submitThresholdPercent = source["submitThresholdPercent"];
 	        this.randomAnswerOnFail = source["randomAnswerOnFail"];
+	        this.xxtAutoExamCode = source["xxtAutoExamCode"];
+	        this.xxtExamCodes = source["xxtExamCodes"];
 	        this.excludeCourses = source["excludeCourses"];
 	        this.includeCourses = source["includeCourses"];
 	        this.coursesSettings = this.convertValues(source["coursesSettings"], CourseSettings);
@@ -788,6 +826,35 @@ export namespace service {
 	        this.startTime = source["startTime"];
 	        this.lastLog = source["lastLog"];
 	        this.error = source["error"];
+	    }
+	}
+	
+	export class XXTExamCodeRequest {
+	    id: string;
+	    uid: string;
+	    account: string;
+	    examName: string;
+	    taskRefId: string;
+	    createdAt: number;
+	    expiresAt: number;
+	    status: string;
+	    code?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new XXTExamCodeRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.uid = source["uid"];
+	        this.account = source["account"];
+	        this.examName = source["examName"];
+	        this.taskRefId = source["taskRefId"];
+	        this.createdAt = source["createdAt"];
+	        this.expiresAt = source["expiresAt"];
+	        this.status = source["status"];
+	        this.code = source["code"];
 	    }
 	}
 
