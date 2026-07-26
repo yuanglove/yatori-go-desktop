@@ -109,6 +109,24 @@
       "name": "TestQuestionBankJSON",
       "params": [],
       "returns": "string"
+    },
+    {
+      "name": "ListXXTExamCodeRequestsJSON",
+      "params": [],
+      "returns": "XXTExamCodeRequest[]"
+    },
+    {
+      "name": "AnswerXXTExamCodeRequest",
+      "params": [
+        { "name": "id", "type": "string" },
+        { "name": "code", "type": "string" }
+      ],
+      "returns": "string"
+    },
+    {
+      "name": "CancelXXTExamCodeRequest",
+      "params": [{ "name": "id", "type": "string" }],
+      "returns": "string"
     }
   ],
   "errorCodes": [

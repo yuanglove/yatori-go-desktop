@@ -1,7 +1,7 @@
 FROM yatori-go-desktop:0.3.4
 
 LABEL org.opencontainers.image.title="yatori-go-desktop"
-LABEL org.opencontainers.image.version="0.3.8"
+LABEL org.opencontainers.image.version="0.4.0"
 
 WORKDIR /src/yatori-go-desktop
 

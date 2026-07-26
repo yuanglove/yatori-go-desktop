@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	CoreVersion      = "0.3.9"
+	CoreVersion      = "0.4.0"
 	APISchemaVersion = 1
 )
 

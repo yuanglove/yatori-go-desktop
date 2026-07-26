@@ -57,14 +57,14 @@ Android 仓库维护：
 运行：
 
 ```powershell
-.\scripts\build-mobilecore.ps1 -Version 0.3.9 -Target android/arm64 -ApiSchemaVersion 1
+.\scripts\build-mobilecore.ps1 -Version 0.4.0 -Target android/arm64 -ApiSchemaVersion 1
 ```
 
 会生成：
 
 ```text
 release/
-├── yatori-mobile-v0.3.9.aar
+├── yatori-mobile-v0.4.0.aar
 ├── api-schema.json
 ├── yatori-core-version.json
 └── yatori-mobilecore-checksums.json
