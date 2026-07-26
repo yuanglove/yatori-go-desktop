@@ -44,6 +44,12 @@ type TaskStatusListResult struct {
 	Error string               `json:"error,omitempty"`
 }
 
+type XXTExamCodeRequestListResult struct {
+	Ok    bool                         `json:"ok"`
+	Data  []service.XXTExamCodeRequest `json:"data"`
+	Error string                       `json:"error,omitempty"`
+}
+
 type DashboardResult struct {
 	Ok    bool              `json:"ok"`
 	Data  service.Dashboard `json:"data"`
@@ -242,6 +248,28 @@ func (a *App) StopTask(uid string) BoolResult {
 
 func (a *App) GetTaskStatuses() TaskStatusListResult {
 	return TaskStatusListResult{Ok: true, Data: a.taskMgr.Statuses()}
+}
+
+func (a *App) ListXXTExamCodeRequests() XXTExamCodeRequestListResult {
+	list, err := service.ListPendingXXTExamCodeRequests()
+	if err != nil {
+		return XXTExamCodeRequestListResult{Error: err.Error()}
+	}
+	return XXTExamCodeRequestListResult{Ok: true, Data: list}
+}
+
+func (a *App) AnswerXXTExamCodeRequest(id, code string) BoolResult {
+	if err := service.AnswerXXTExamCodeRequest(id, code); err != nil {
+		return BoolResult{Error: err.Error()}
+	}
+	return BoolResult{Ok: true}
+}
+
+func (a *App) CancelXXTExamCodeRequest(id string) BoolResult {
+	if err := service.CancelXXTExamCodeRequest(id); err != nil {
+		return BoolResult{Error: err.Error()}
+	}
+	return BoolResult{Ok: true}
 }
 
 // --- 仪表盘 ---

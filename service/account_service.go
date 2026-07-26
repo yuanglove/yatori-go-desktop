@@ -39,6 +39,7 @@ func ListAccounts(mgr *TaskManager) ([]AccountVO, error) {
 	for _, r := range rows {
 		var cc CoursesCustom
 		_ = json.Unmarshal([]byte(r.CoursesCustom), &cc)
+		NormalizeCoursesCustom(r.AccountType, &cc)
 		var emails []string
 		_ = json.Unmarshal([]byte(r.InformEmails), &emails)
 		if emails == nil {
@@ -90,6 +91,7 @@ func AddAccount(req AccountReq) error {
 		return err
 	}
 	uid, _ := uuid.NewV7()
+	NormalizeCoursesCustom(req.AccountType, &req.CoursesCustom)
 	ccJSON, _ := json.Marshal(req.CoursesCustom)
 	emailsJSON, _ := json.Marshal(req.InformEmails)
 	row := AccountPO{
@@ -119,6 +121,7 @@ func UpdateAccount(req AccountReq) error {
 	if err := checkDuplicateAccount(req); err != nil {
 		return err
 	}
+	NormalizeCoursesCustom(req.AccountType, &req.CoursesCustom)
 	updates := map[string]any{
 		"account_type": req.AccountType,
 		"url":          req.URL,
@@ -157,6 +160,13 @@ func ImportAccountPOs(rows []AccountPO) (AccountImportSummary, error) {
 		return summary, err
 	}
 	for _, row := range rows {
+		var cc CoursesCustom
+		if err := json.Unmarshal([]byte(row.CoursesCustom), &cc); err == nil {
+			NormalizeCoursesCustom(row.AccountType, &cc)
+			if data, err := json.Marshal(cc); err == nil {
+				row.CoursesCustom = string(data)
+			}
+		}
 		if row.UID == "" || row.Account == "" || row.AccountType == "" {
 			summary.Skipped++
 			continue
@@ -204,6 +214,13 @@ func getAccountPO(uid string) (AccountPO, error) {
 	err := db.Where("uid = ?", uid).First(&row).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return AccountPO{}, fmt.Errorf("账号不存在")
+	}
+	var cc CoursesCustom
+	if err := json.Unmarshal([]byte(row.CoursesCustom), &cc); err == nil {
+		NormalizeCoursesCustom(row.AccountType, &cc)
+		if data, err := json.Marshal(cc); err == nil {
+			row.CoursesCustom = string(data)
+		}
 	}
 	return row, err
 }

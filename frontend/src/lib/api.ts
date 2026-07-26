@@ -23,6 +23,8 @@ export interface CoursesCustom {
   studyTime?:string; cxNode?:number; cxChapterTestSw?:number; cxWorkSw?:number; cxExamSw?:number
   shuffleSw:number; videoModel:number; autoExam:number; examAutoSubmit:number
   submitThresholdPercent?:number; randomAnswerOnFail?:number
+  xxtAutoExamCode?:number
+  xxtExamCodes?:Record<string,string>
   excludeCourses:string[]; includeCourses:string[]
 }
 export interface AccountVO {
@@ -39,6 +41,7 @@ export interface Dashboard { totalAccounts:number; runningTasks:number; configPa
 export interface PlatformInfo { code:string; name:string; guiSupport:string; note:string }
 export interface UpdateInfo { hasUpdate:boolean; latestVersion:string; currentVersion:string; url:string }
 export interface CourseVO { platform:string; key:string; courseId:string; courseName:string; courseTeacher:string; jobFinishCount:number; jobCount:number; jobRate:number; hasProgress:boolean; state:number; isStart:boolean; rawStatusText:string }
+export interface XXTExamCodeRequest { id:string; uid:string; account:string; examName:string; taskRefId:string; createdAt:number; expiresAt:number; status:string; code?:string }
 
 export interface BoolResult           { ok:boolean; error?:string }
 export interface StringResult         { ok:boolean; data:string;         error?:string }
@@ -50,6 +53,7 @@ export interface StringListResult     { ok:boolean; data:string[];       error?:
 export interface PlatformListResult   { ok:boolean; data:PlatformInfo[]; error?:string }
 export interface UpdateResult         { ok:boolean; data:UpdateInfo;     error?:string }
 export interface CourseListResult     { ok:boolean; data:CourseVO[];     error?:string }
+export interface XXTExamCodeRequestListResult { ok:boolean; data:XXTExamCodeRequest[]; error?:string }
 
 const c = <T>(p: Promise<unknown>): Promise<T> => p as Promise<T>
 
@@ -78,6 +82,9 @@ export const api = {
   startICVECookieCapture: (url: string): Promise<StringResult>          => c(App.StartICVECookieCapture(url)),
   readICVECookie:     ():                Promise<StringResult>          => c(App.ReadICVECookie()),
   getCourses:         (uid: string):     Promise<CourseListResult>      => c(App.GetCourses(uid)),
+  listXXTExamCodeRequests: ():           Promise<XXTExamCodeRequestListResult> => c(App.ListXXTExamCodeRequests()),
+  answerXXTExamCodeRequest: (id: string, code: string): Promise<BoolResult> => c(App.AnswerXXTExamCodeRequest(id, code)),
+  cancelXXTExamCodeRequest: (id: string): Promise<BoolResult> => c(App.CancelXXTExamCodeRequest(id)),
 }
 
 export function onTaskLog(uid: string, cb: (msg: string) => void): () => void {

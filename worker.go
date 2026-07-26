@@ -16,12 +16,11 @@ import (
 )
 
 func workerLog(format string, args ...interface{}) string {
-	return fmt.Sprintf("[%s] [系统] %s",
+	return fmt.Sprintf("[%s] [\u7cfb\u7edf] %s",
 		time.Now().Format("2006-01-02 15:04:05"),
 		fmt.Sprintf(format, args...))
 }
 
-// needsCoreRuntime 判断平台是否需要初始化 ONNX Runtime（OCR）
 func needsCoreRuntime(platform string) bool {
 	switch platform {
 	case "YINGHUA", "CANGHUI", "XUEXITONG", "CQIE", "QSXT":
@@ -44,25 +43,25 @@ func runWorker(uid string) int {
 	}()
 
 	if err := service.InitDB(); err != nil {
-		p("初始化数据库失败: %s", err)
+		p("\u521d\u59cb\u5316\u6570\u636e\u5e93\u5931\u8d25: %s", err)
 		return 1
 	}
 
 	po, err := service.GetAccountPO(uid)
 	if err != nil {
-		p("账号不存在: %s", err)
+		p("\u8d26\u53f7\u4e0d\u5b58\u5728: %s", err)
 		return 1
 	}
 
 	cfgPath, err := service.DefaultConfigPath()
 	if err != nil {
-		p("获取配置路径失败: %s", err)
+		p("\u83b7\u53d6\u914d\u7f6e\u8def\u5f84\u5931\u8d25: %s", err)
 		return 1
 	}
 
 	cfg, err := service.LoadConfig(cfgPath)
 	if err != nil {
-		p("加载配置失败: %s", err)
+		p("\u52a0\u8f7d\u914d\u7f6e\u5931\u8d25: %s", err)
 		return 1
 	}
 
@@ -94,7 +93,7 @@ func runWorker(uid string) int {
 		setting.BasicSetting.LogLevel = "INFO"
 	}
 	service.SetRuntimeQuestionBankSetting(cfg.Setting.ApiQueSetting)
-	p("日志配置: level=%s model=%d file=%d", setting.BasicSetting.LogLevel, setting.BasicSetting.LogModel, setting.BasicSetting.LogOutFileSw)
+	p("\u65e5\u5fd7\u914d\u7f6e: level=%s model=%d file=%d", setting.BasicSetting.LogLevel, setting.BasicSetting.LogModel, setting.BasicSetting.LogOutFileSw)
 
 	user := service.BuildUserFromPO(po)
 
@@ -106,41 +105,40 @@ func runWorker(uid string) int {
 		}
 	}
 
-	// 按平台决定是否初始化 ONNX Runtime
 	if needsCoreRuntime(po.AccountType) {
-		p("初始化 Core Runtime...")
+		p("\u521d\u59cb\u5316 Core Runtime...")
 		if err := service.EnsureCoreRuntime(); err != nil {
-			p("Core Runtime 初始化失败: %s", err)
-			p("这通常是 OCR/ONNX 运行环境加载失败。请确认使用完整发布包、不要直接在压缩包内运行，并安装 Microsoft Visual C++ 2015-2022 x64 运行库后重试。")
+			p("Core Runtime \u521d\u59cb\u5316\u5931\u8d25: %s", err)
+			p("OCR/ONNX \u8fd0\u884c\u73af\u5883\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u786e\u8ba4\u4f7f\u7528\u5b8c\u6574\u53d1\u5e03\u5305\u5e76\u5b89\u88c5 VC++ \u8fd0\u884c\u5e93\u540e\u91cd\u8bd5")
 			return 1
 		}
-		p("Core Runtime 初始化完成")
+		p("Core Runtime \u521d\u59cb\u5316\u5b8c\u6210")
 	} else {
-		p("跳过 Core Runtime 初始化：当前平台无需 OCR")
+		p("\u8df3\u8fc7 Core Runtime \u521d\u59cb\u5316\uff1a\u5f53\u524d\u5e73\u53f0\u65e0\u9700 OCR")
 	}
 
-	p("正在登录 %s (%s)...", po.Account, po.AccountType)
+	p("\u6b63\u5728\u767b\u5f55 %s (%s)...", po.Account, po.AccountType)
 
 	var runErr error
 	switch po.AccountType {
 	case "XUEXITONG":
 		act := service.BuildActivity(po)
 		if act == nil {
-			p("构建学习通 Activity 失败")
+			p("\u6784\u5efa\u5b66\u4e60\u901a Activity \u5931\u8d25")
 			return 1
 		}
 		if err := act.Login(); err != nil {
-			p("登录失败: %s", err)
+			p("\u767b\u5f55\u5931\u8d25: %s", err)
 			return 1
 		}
 		cache := act.GetUserCache()
 		if cache == nil {
-			p("登录后 cache 为空")
+			p("\u767b\u5f55\u540e cache \u4e3a\u7a7a")
 			return 1
 		}
 		xxtCache, ok := cache.(*xuexitongApiPkg.XueXiTUserCache)
 		if !ok {
-			p("cache 类型断言失败，非 XUEXITONG")
+			p("cache \u7c7b\u578b\u65ad\u8a00\u5931\u8d25\uff0c\u975e XUEXITONG")
 			return 1
 		}
 		submitThreshold := 100
@@ -152,18 +150,25 @@ func runWorker(uid string) int {
 			}
 			randomAnswerOnFail = cc.RandomAnswerOnFail
 		}
-		p("登录成功，开始学习任务")
-		runErr = service.SafeRun(context.Background(), setting, &user, xxtCache, submitThreshold, randomAnswerOnFail, emit)
+		p("\u767b\u5f55\u6210\u529f\uff0c\u5f00\u59cb\u5b66\u4e60\u4efb\u52a1")
+		runErr = service.SafeRunWithExamOptions(context.Background(), setting, &user, xxtCache, service.XXTExamOptions{
+			SubmitThreshold:    submitThreshold,
+			RandomAnswerOnFail: randomAnswerOnFail,
+			AutoExamCode:       0,
+			ExamCodes:          nil,
+			AccountUID:         po.UID,
+			AccountName:        po.Account,
+		}, emit)
 
 	case "YINGHUA", "CANGHUI":
-		p("英华参数: URL=%q Account=%q PasswordEnc空=%v 密码长度=%d",
+		p("\u82f1\u534e\u53c2\u6570: URL=%q Account=%q PasswordEnc\u7a7a=%v \u5bc6\u7801\u957f\u5ea6=%d",
 			po.URL, po.Account, po.PasswordEnc == "", len(service.DecodePassword(po.PasswordEnc)))
 		if po.URL == "" {
-			p("英华 URL 为空，无法登录（请在账号管理中填写学校入口地址）")
+			p("\u82f1\u534e URL \u4e3a\u7a7a\uff0c\u65e0\u6cd5\u767b\u5f55\uff08\u8bf7\u5728\u8d26\u53f7\u7ba1\u7406\u4e2d\u586b\u5199\u5b66\u6821\u5165\u53e3\u5730\u5740\uff09")
 			return 1
 		}
 		if po.PasswordEnc == "" {
-			p("英华密码未保存，无法登录")
+			p("\u82f1\u534e\u5bc6\u7801\u672a\u4fdd\u5b58\uff0c\u65e0\u6cd5\u767b\u5f55")
 			return 1
 		}
 		yhCache := &yinghuaApiPkg.YingHuaUserCache{
@@ -171,12 +176,12 @@ func runWorker(uid string) int {
 			Account:  po.Account,
 			Password: service.DecodePassword(po.PasswordEnc),
 		}
-		p("英华 cache 构建完成，PreUrl=%q", yhCache.PreUrl)
+		p("\u82f1\u534e cache \u6784\u5efa\u5b8c\u6210\uff0cPreUrl=%q", yhCache.PreUrl)
 		if err := yinghua.YingHuaLoginAction(yhCache); err != nil {
-			p("英华登录失败: %s", err)
+			p("\u82f1\u534e\u767b\u5f55\u5931\u8d25: %s", err)
 			return 1
 		}
-		p("英华登录成功，开始学习任务")
+		p("\u82f1\u534e\u767b\u5f55\u6210\u529f\uff0c\u5f00\u59cb\u5b66\u4e60\u4efb\u52a1")
 		runErr = service.SafeYingHuaRun(context.Background(), setting, &user, yhCache, emit)
 
 	case "ENAEA":
@@ -204,13 +209,13 @@ func runWorker(uid string) int {
 		service.RunKetangx(setting, user, emit)
 
 	default:
-		p("平台 %s 暂不支持，跳过", po.AccountType)
+		p("\u5e73\u53f0 %s \u6682\u4e0d\u652f\u6301\uff0c\u8df3\u8fc7", po.AccountType)
 	}
 
 	if runErr != nil {
-		p("任务失败: %s", runErr)
+		p("\u4efb\u52a1\u5931\u8d25: %s", runErr)
 		return 1
 	}
-	p("所有任务完成")
+	p("\u6240\u6709\u4efb\u52a1\u5b8c\u6210")
 	return 0
 }

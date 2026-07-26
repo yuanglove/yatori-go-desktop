@@ -11,11 +11,14 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"crypto/tls"
 	"encoding/json"
 	"github.com/thedevsaddam/gojsonq"
 	xuexitong "github.com/yatori-dev/yatori-go-core/aggregation/xuexitong"
@@ -23,12 +26,25 @@ import (
 	aiq "github.com/yatori-dev/yatori-go-core/que-core/aiq"
 	"io"
 	"net/http"
+	"net/url"
+	"regexp"
 	consoleConfig "yatori-go-console/config"
 	xxtLogic "yatori-go-console/logic/xuexitong"
 )
 
 // emit 是日志回调，用 printf 格式
 type emitFn func(format string, args ...interface{})
+
+type XXTExamOptions struct {
+	SubmitThreshold    int
+	RandomAnswerOnFail int
+	AutoExamCode       int
+	ExamCodes          map[string]string
+	AccountUID         string
+	AccountName        string
+}
+
+var xxtExamOptionsStore sync.Map
 
 // sleepCtx 可被 ctx cancel 中断的 sleep
 func sleepCtx(ctx context.Context, d time.Duration) {
@@ -63,10 +79,30 @@ func formatTaskPoint(k xuexitong.KnowledgeItem) string {
 func SafeRun(ctx context.Context, setting consoleConfig.Setting,
 	user *consoleConfig.User, cache *xuexitongApi.XueXiTUserCache,
 	submitThreshold int, randomAnswerOnFail int, emit emitFn) error {
+	return SafeRunWithExamOptions(ctx, setting, user, cache, XXTExamOptions{
+		SubmitThreshold:    submitThreshold,
+		RandomAnswerOnFail: randomAnswerOnFail,
+		AutoExamCode:       1,
+	}, emit)
+}
+
+func SafeRunWithExamOptions(ctx context.Context, setting consoleConfig.Setting,
+	user *consoleConfig.User, cache *xuexitongApi.XueXiTUserCache,
+	examOptions XXTExamOptions, emit emitFn) error {
 
 	if emit == nil {
 		emit = func(f string, a ...interface{}) {}
 	}
+	if examOptions.SubmitThreshold <= 0 {
+		examOptions.SubmitThreshold = 100
+	}
+	if cache != nil {
+		key := fmt.Sprintf("%p", cache)
+		xxtExamOptionsStore.Store(key, examOptions)
+		defer xxtExamOptionsStore.Delete(key)
+	}
+	submitThreshold := examOptions.SubmitThreshold
+	randomAnswerOnFail := examOptions.RandomAnswerOnFail
 
 	// 拉取课程
 	courseList, err := xuexitong.XueXiTPullCourseAction(cache)
@@ -541,6 +577,7 @@ func safeRunWorkAndExam(ctx context.Context, setting consoleConfig.Setting,
 	xlog := func(item, msg string) {
 		emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, "", item, msg))
 	}
+	examOptions := xxtOptionsFor(cache, submitThreshold)
 
 	if user.CoursesCustom.AutoExam == 0 {
 		return
@@ -600,11 +637,12 @@ func safeRunWorkAndExam(ctx context.Context, setting consoleConfig.Setting,
 					continue
 				}
 				xlog(exam.Name, "检测到待做考试")
-				if err2 := xuexitong.EnterExamAction(cache, &exam); err2 != nil {
-					xlog(exam.Name, "进入考试失败: "+err2.Error())
+				examCode := xxtResolveExamCode(cache, &exam, examOptions, xlog)
+				if err2 := enterXXTExamWithCode(cache, &exam, examCode, examOptions, xlog); err2 != nil {
+					xlog(exam.Name, "enter exam failed: "+err2.Error())
 					continue
 				}
-				safeExamAction(ctx, setting, user, cache, course, exam, emit)
+				safeExamAction(ctx, setting, user, cache, course, exam, examOptions, emit)
 			}
 		}
 	}
@@ -654,7 +692,7 @@ func safeWorkAction(ctx context.Context, setting consoleConfig.Setting,
 
 func safeExamAction(ctx context.Context, setting consoleConfig.Setting,
 	user *consoleConfig.User, cache *xuexitongApi.XueXiTUserCache,
-	course *xuexitong.XueXiTCourse, exam xuexitong.XXTExam, emit emitFn) {
+	course *xuexitong.XueXiTCourse, exam xuexitong.XXTExam, examOptions XXTExamOptions, emit emitFn) {
 	xlog := func(msg string) {
 		emit("%s", formatXXTLog("学习通", cache.Name, course.CourseName, "", exam.Name, msg))
 	}
@@ -695,6 +733,646 @@ func safeExamAction(ctx context.Context, setting consoleConfig.Setting,
 }
 
 // hasAIConfig 判断 AI 答题是否配置完整
+
+func xxtOptionsFor(cache *xuexitongApi.XueXiTUserCache, submitThreshold int) XXTExamOptions {
+	opts := XXTExamOptions{SubmitThreshold: submitThreshold, AutoExamCode: 1}
+	if cache != nil {
+		if v, ok := xxtExamOptionsStore.Load(fmt.Sprintf("%p", cache)); ok {
+			if vv, ok2 := v.(XXTExamOptions); ok2 {
+				opts = vv
+			}
+		}
+	}
+	if opts.SubmitThreshold <= 0 {
+		opts.SubmitThreshold = 100
+	}
+	return opts
+}
+
+func xxtResolveExamCode(cache *xuexitongApi.XueXiTUserCache, exam *xuexitong.XXTExam, opts XXTExamOptions, xlog func(item, msg string)) (code string) {
+	defer func() {
+		if r := recover(); r != nil {
+			xlog(exam.Name, fmt.Sprintf("auto exam code panic: %v", r))
+			code = xxtExamCodeFor(exam.Name, opts)
+		}
+	}()
+	if opts.AutoExamCode == 1 {
+		xlog(exam.Name, "auto exam code: start")
+		code, source := xxtAutoFetchExamCode(cache, exam, func(msg string) { xlog(exam.Name, msg) })
+		if code != "" {
+			xlog(exam.Name, "auto exam code found source="+source)
+			return code
+		}
+		if fallback := xxtExamCodeFor(exam.Name, opts); fallback != "" {
+			xlog(exam.Name, "auto exam code not found, using configured fallback")
+			return fallback
+		}
+		xlog(exam.Name, "auto exam code not found")
+		return ""
+	}
+	code = xxtExamCodeFor(exam.Name, opts)
+	if code != "" {
+		xlog(exam.Name, "using configured exam code")
+	}
+	return code
+}
+
+func xxtExamCodeFor(examName string, opts XXTExamOptions) string {
+	name := strings.TrimSpace(examName)
+	for k, v := range opts.ExamCodes {
+		if strings.TrimSpace(k) != "" && strings.TrimSpace(v) != "" && strings.Contains(name, strings.TrimSpace(k)) {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
+func xxtAutoFetchExamCode(cache *xuexitongApi.XueXiTUserCache, exam *xuexitong.XXTExam, diag func(string)) (string, string) {
+	if exam == nil {
+		return "", ""
+	}
+	if diag == nil {
+		diag = func(string) {}
+	}
+	diag(fmt.Sprintf("auto exam code: rawURL=%s taskRefId=%s answerId=%s", xxtShortText(exam.RawURL, 120), exam.TaskRefId, exam.AnswerId))
+	if code, src := xxtExtractExamCodeFromParams(exam.Params); code != "" {
+		return code, src
+	}
+	if code, src := xxtExtractExamCode(exam.RawURL); code != "" {
+		return code, "raw_url:" + src
+	}
+	if cache != nil && strings.TrimSpace(exam.TaskRefId) != "" {
+		enterURL := xxtBuildExamEnterURL(exam)
+		diag("auto exam code: fetching enter page with timeout")
+		html, finalURL, err := xxtExamGETWithFinalURL(cache, enterURL, "", 12*time.Second)
+		if err != nil {
+			diag("auto exam code: enter fetch failed: " + err.Error())
+			return "", ""
+		}
+		diag("auto exam code: enter finalURL=" + xxtShortText(finalURL, 160))
+		xxtFillExamFieldsFromRaw(exam, finalURL)
+		xxtFillExamFieldsFromRaw(exam, html)
+		if dumpPath, err := xxtSaveExamEnterDebugDump(exam, enterURL, finalURL, html); err == nil && dumpPath != "" {
+			diag("auto exam code: saved enter html=" + dumpPath)
+		}
+		if code, src := xxtExtractExamCode(finalURL); code != "" {
+			return code, "enter_final_url:" + src
+		}
+		if code, src := xxtExtractExamCode(html); code != "" {
+			return code, "enter_html:" + src
+		}
+		if xxtRequiresManualExamCode(html) {
+			diag("auto exam code: page requires code but input value is blank")
+		}
+		if jumpURL := xxtExtractExamJumpURL(html); jumpURL != "" {
+			diag("auto exam code: follow examJumpUrl=" + xxtShortText(jumpURL, 160))
+			jumpHTML, jumpFinalURL, jumpErr := xxtExamGETWithFinalURL(cache, xxtAbsoluteXXTURL(jumpURL), finalURL, 12*time.Second)
+			if jumpErr != nil {
+				diag("auto exam code: examJumpUrl fetch failed: " + jumpErr.Error())
+			} else {
+				diag("auto exam code: examJumpUrl finalURL=" + xxtShortText(jumpFinalURL, 160))
+				xxtFillExamFieldsFromRaw(exam, jumpFinalURL)
+				xxtFillExamFieldsFromRaw(exam, jumpHTML)
+				if dumpPath, err := xxtSaveExamEnterDebugDump(exam, xxtAbsoluteXXTURL(jumpURL), jumpFinalURL, jumpHTML); err == nil && dumpPath != "" {
+					diag("auto exam code: saved jump html=" + dumpPath)
+				}
+				if code, src := xxtExtractExamCode(jumpFinalURL); code != "" {
+					return code, "exam_jump_url:" + src
+				}
+				if code, src := xxtExtractExamCode(jumpHTML); code != "" {
+					return code, "exam_jump_html:" + src
+				}
+			}
+		}
+		diag("auto exam code: no code in enter page, html=" + xxtShortText(html, 200))
+	}
+	return "", ""
+}
+
+func xxtBuildExamEnterURL(exam *xuexitong.XXTExam) string {
+	q := url.Values{}
+	q.Set("taskrefId", exam.TaskRefId)
+	q.Set("msgId", exam.MsgId)
+	q.Set("courseId", exam.CourseId)
+	q.Set("userId", exam.UserId)
+	q.Set("clazzId", exam.ClazzId)
+	q.Set("type", exam.Type)
+	q.Set("enc_task", exam.EncTask)
+	return "https://mooc1-api.chaoxing.com/exam-ans/android/mtaskmsgspecial?" + q.Encode()
+}
+
+func xxtExtractExamCodeFromParams(params map[string]string) (string, string) {
+	for _, key := range []string{"code", "examCode", "exam_code", "examPwd", "examPassword", "examPasswordCode", "password", "pwd", "verifyCode", "examVerifyCode", "validateCode"} {
+		if v := strings.TrimSpace(params[key]); xxtLooksLikeExamCode(v) {
+			return v, "param:" + key
+		}
+	}
+	for k, v := range params {
+		lk := strings.ToLower(k)
+		if strings.Contains(lk, "code") || strings.Contains(lk, "pwd") {
+			if vv := strings.TrimSpace(v); xxtLooksLikeExamCode(vv) {
+				return vv, "param:" + k
+			}
+		}
+	}
+	return "", ""
+}
+
+func xxtExtractExamCodeFromValues(values url.Values) (string, string) {
+	for _, key := range []string{"code", "examCode", "exam_code", "examPwd", "examPassword", "examPasswordCode", "verifyCode", "examVerifyCode", "validateCode"} {
+		if v := strings.TrimSpace(values.Get(key)); xxtLooksLikeExamCode(v) {
+			return v, key
+		}
+	}
+	for key, vals := range values {
+		lk := strings.ToLower(key)
+		if !(strings.Contains(lk, "examcode") || strings.Contains(lk, "exam_code") || strings.Contains(lk, "exampwd") || strings.Contains(lk, "verifycode") || strings.Contains(lk, "validatecode")) {
+			continue
+		}
+		for _, v := range vals {
+			if vv := strings.TrimSpace(v); xxtLooksLikeExamCode(vv) {
+				return vv, key
+			}
+		}
+	}
+	return "", ""
+}
+
+func xxtExtractExamCode(raw string) (string, string) {
+	if strings.TrimSpace(raw) == "" {
+		return "", ""
+	}
+	if u, err := url.Parse(raw); err == nil {
+		if code, src := xxtExtractExamCodeFromValues(u.Query()); code != "" {
+			return code, "query:" + src
+		}
+	}
+	patterns := []string{
+		`(?i)(?:examCode|examPwd|examPassword|verifyCode|validateCode|code|pwd|password)["'\s:=]+([A-Za-z][A-Za-z0-9_-]{5,31})`,
+		`\bt\d{6,10}\b`,
+	}
+	for _, p := range patterns {
+		re := regexp.MustCompile(p)
+		m := re.FindStringSubmatch(raw)
+		if len(m) > 1 && xxtLooksLikeExamCode(m[1]) {
+			return strings.TrimSpace(m[1]), "regex"
+		}
+		if len(m) == 1 && xxtLooksLikeExamCode(m[0]) {
+			return strings.TrimSpace(m[0]), "regex"
+		}
+	}
+	return "", ""
+}
+
+func xxtExtractExamJumpURL(raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	patterns := []string{
+		`(?is)<input[^>]+id=["']examJumpUrl["'][^>]+value=["']([^"']+)["']`,
+		`(?is)<input[^>]+value=["']([^"']+)["'][^>]+id=["']examJumpUrl["']`,
+		`(?is)examJumpUrl[^>]+value=["']([^"']+)["']`,
+	}
+	for _, p := range patterns {
+		re := regexp.MustCompile(p)
+		if m := re.FindStringSubmatch(raw); len(m) > 1 && strings.TrimSpace(m[1]) != "" {
+			return strings.TrimSpace(strings.ReplaceAll(m[1], "&amp;", "&"))
+		}
+	}
+	return ""
+}
+
+func xxtRequiresManualExamCode(raw string) bool {
+	if strings.TrimSpace(raw) == "" {
+		return false
+	}
+	return regexp.MustCompile(`(?is)var\s+needcode\s*=\s*1\b`).MatchString(raw) ||
+		regexp.MustCompile(`(?is)<input[^>]+id=["']code["'][^>]*placeholder=["'][^"']*考试码`).MatchString(raw)
+}
+
+func xxtAbsoluteXXTURL(raw string) string {
+	raw = strings.TrimSpace(strings.ReplaceAll(raw, "&amp;", "&"))
+	if raw == "" {
+		return raw
+	}
+	if strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
+		return raw
+	}
+	if strings.HasPrefix(raw, "//") {
+		return "https:" + raw
+	}
+	if strings.HasPrefix(raw, "/") {
+		return "https://mooc1-api.chaoxing.com" + raw
+	}
+	return "https://mooc1-api.chaoxing.com/" + raw
+}
+
+func xxtSaveExamEnterDebugDump(exam *xuexitong.XXTExam, requestURL, finalURL, html string) (string, error) {
+	if exam == nil || strings.TrimSpace(html) == "" {
+		return "", nil
+	}
+	dir, err := DataDir()
+	if err != nil {
+		return "", err
+	}
+	debugDir := filepath.Join(dir, "debug", "xxt-exam")
+	if err := os.MkdirAll(debugDir, 0755); err != nil {
+		return "", err
+	}
+	name := xxtSafeFilePart(exam.Name)
+	if name == "" {
+		name = "exam"
+	}
+	task := xxtSafeFilePart(exam.TaskRefId)
+	if task == "" {
+		task = "task"
+	}
+	path := filepath.Join(debugDir, fmt.Sprintf("%s-%s.html", name, task))
+	content := strings.Builder{}
+	content.WriteString("<!-- Yatori XXT exam auto-code debug dump\n")
+	content.WriteString("examName: " + exam.Name + "\n")
+	content.WriteString("taskRefId: " + exam.TaskRefId + "\n")
+	content.WriteString("answerId: " + exam.AnswerId + "\n")
+	content.WriteString("courseId: " + exam.CourseId + "\n")
+	content.WriteString("classId: " + exam.ClazzId + "\n")
+	content.WriteString("cpi: " + exam.Cpi + "\n")
+	content.WriteString("requestURL: " + requestURL + "\n")
+	content.WriteString("finalURL: " + finalURL + "\n")
+	content.WriteString("-->\n")
+	content.WriteString(html)
+	return path, os.WriteFile(path, []byte(content.String()), 0644)
+}
+
+func xxtSafeFilePart(raw string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return ""
+	}
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '-' || r == '_' || r == '.':
+			b.WriteRune(r)
+		case r >= 0x4e00 && r <= 0x9fff:
+			b.WriteRune(r)
+		default:
+			b.WriteByte('_')
+		}
+		if b.Len() >= 80 {
+			break
+		}
+	}
+	return strings.Trim(b.String(), "._- ")
+}
+
+func xxtFillExamFieldsFromRaw(exam *xuexitong.XXTExam, raw string) {
+	if exam == nil || strings.TrimSpace(raw) == "" {
+		return
+	}
+	if u, err := url.Parse(raw); err == nil {
+		q := u.Query()
+		xxtSetIfEmpty(&exam.ExamRelationId, q.Get("examId"))
+		xxtSetIfEmpty(&exam.ExamRelationId, q.Get("testPaperId"))
+		xxtSetIfEmpty(&exam.AnswerId, q.Get("examAnswerId"))
+		xxtSetIfEmpty(&exam.AnswerId, q.Get("testUserRelationId"))
+		xxtSetIfEmpty(&exam.Cpi, q.Get("cpi"))
+	}
+	for _, pair := range [][2]string{{"captchaCaptchaId", "CaptchaCaptchaId"}, {"testPaperId", "ExamRelationId"}, {"testUserRelationId", "AnswerId"}, {"cpi", "Cpi"}, {"enc", "Enc"}, {"encRemainTime", "EncRemainTime"}, {"encLastUpdateTime", "EncLastUpdateTime"}} {
+		re := regexp.MustCompile(`(?is)<input[^>]+(?:id|name)=["']` + regexp.QuoteMeta(pair[0]) + `["'][^>]+value=["']([^"']*)["']`)
+		if m := re.FindStringSubmatch(raw); len(m) > 1 {
+			switch pair[1] {
+			case "CaptchaCaptchaId":
+				xxtSetIfEmpty(&exam.CaptchaCaptchaId, m[1])
+			case "ExamRelationId":
+				xxtSetIfEmpty(&exam.ExamRelationId, m[1])
+			case "AnswerId":
+				xxtSetIfEmpty(&exam.AnswerId, m[1])
+			case "Cpi":
+				xxtSetIfEmpty(&exam.Cpi, m[1])
+			case "Enc":
+				xxtSetIfEmpty(&exam.Enc, m[1])
+			case "EncRemainTime":
+				xxtSetIfEmpty(&exam.EncRemainTime, m[1])
+			case "EncLastUpdateTime":
+				xxtSetIfEmpty(&exam.EncLastUpdateTime, m[1])
+			}
+		}
+	}
+}
+
+func xxtSetIfEmpty(dst *string, v string) {
+	if dst != nil && strings.TrimSpace(*dst) == "" && strings.TrimSpace(v) != "" {
+		*dst = strings.TrimSpace(v)
+	}
+}
+
+func xxtLooksLikeExamCode(v string) bool {
+	v = strings.TrimSpace(v)
+	if len(v) < 4 || len(v) > 32 {
+		return false
+	}
+	if strings.ContainsAny(v, " \t\r\n/?&=#<>\"'") {
+		return false
+	}
+	matched, _ := regexp.MatchString(`^[A-Za-z][A-Za-z0-9_-]+$`, v)
+	return matched
+}
+
+func enterXXTExamWithCode(cache *xuexitongApi.XueXiTUserCache, exam *xuexitong.XXTExam, examCode string, opts XXTExamOptions, xlog func(item, msg string)) error {
+	if strings.TrimSpace(examCode) != "" {
+		if err := xxtEnterExamWithCodeDirect(cache, exam, examCode, xlog); err == nil && xxtExamReady(exam) {
+			return nil
+		} else if err != nil {
+			xlog(exam.Name, "direct exam-code entry failed: "+err.Error())
+		}
+	}
+	err := xuexitong.EnterExamAction(cache, exam)
+	if err != nil {
+		if strings.TrimSpace(examCode) == "" {
+			xlog(exam.Name, "exam needs code, waiting for user input")
+			if code, waitErr := WaitForXXTExamCode(opts.AccountUID, opts.AccountName, exam.Name, exam.TaskRefId, 10*time.Minute); waitErr == nil && strings.TrimSpace(code) != "" {
+				xlog(exam.Name, "received exam code from popup")
+				return xxtEnterExamWithCodeDirect(cache, exam, code, xlog)
+			} else if waitErr != nil {
+				xlog(exam.Name, "wait exam code failed: "+waitErr.Error())
+			}
+			return err
+		}
+		xlog(exam.Name, "enter failed, retry with exam code: "+err.Error())
+		if err2 := tryXXTExamCode(cache, exam, examCode); err2 != nil {
+			return err2
+		}
+		err = xuexitong.EnterExamAction(cache, exam)
+		if err != nil {
+			return err
+		}
+	}
+	if xxtExamReady(exam) {
+		return nil
+	}
+	if strings.TrimSpace(examCode) == "" {
+		xlog(exam.Name, "exam needs code, waiting for user input")
+		if code, waitErr := WaitForXXTExamCode(opts.AccountUID, opts.AccountName, exam.Name, exam.TaskRefId, 10*time.Minute); waitErr == nil && strings.TrimSpace(code) != "" {
+			xlog(exam.Name, "received exam code from popup")
+			return xxtEnterExamWithCodeDirect(cache, exam, code, xlog)
+		} else if waitErr != nil {
+			xlog(exam.Name, "wait exam code failed: "+waitErr.Error())
+		}
+		msg := fmt.Sprintf("exam entry incomplete and no exam code: paper=%s answer=%s cpi=%s encLen=%d", exam.ExamRelationId, exam.AnswerId, exam.Cpi, len(exam.Enc))
+		xlog(exam.Name, msg)
+		return fmt.Errorf("%s", msg)
+	}
+	xlog(exam.Name, "exam entry incomplete, trying exam code validation")
+	if err := xxtEnterExamWithCodeDirect(cache, exam, examCode, xlog); err != nil {
+		if err2 := tryXXTExamCode(cache, exam, examCode); err2 != nil {
+			return err
+		}
+		err = xuexitong.EnterExamAction(cache, exam)
+		if err != nil {
+			return err
+		}
+	}
+	if !xxtExamReady(exam) {
+		msg := fmt.Sprintf("exam code validation done but entry still incomplete: paper=%s answer=%s cpi=%s encLen=%d", exam.ExamRelationId, exam.AnswerId, exam.Cpi, len(exam.Enc))
+		xlog(exam.Name, msg)
+		return fmt.Errorf("%s", msg)
+	}
+	return nil
+}
+
+func xxtEnterExamWithCodeDirect(cache *xuexitongApi.XueXiTUserCache, exam *xuexitong.XXTExam, examCode string, xlog func(item, msg string)) error {
+	if cache == nil || exam == nil {
+		return fmt.Errorf("cache or exam is nil")
+	}
+	code := strings.TrimSpace(examCode)
+	if code == "" {
+		return fmt.Errorf("exam code is empty")
+	}
+	enterURL := xxtBuildExamEnterURL(exam)
+	enterHTML, refererURL, err := xxtExamGETWithFinalURL(cache, enterURL, "", 12*time.Second)
+	if err != nil {
+		return err
+	}
+	xxtFillExamFieldsFromRaw(exam, refererURL)
+	xxtFillExamFieldsFromRaw(exam, enterHTML)
+	if exam.QuestionTotal <= 0 {
+		exam.QuestionTotal = xxtExtractExamQuestionTotal(enterHTML)
+	}
+	if xlog != nil {
+		xlog(exam.Name, fmt.Sprintf("direct exam-code entry: paper=%s answer=%s cpi=%s captcha=%v", exam.ExamRelationId, exam.AnswerId, exam.Cpi, exam.CaptchaCaptchaId != ""))
+	}
+	if strings.TrimSpace(exam.ExamRelationId) == "" || strings.TrimSpace(exam.AnswerId) == "" || strings.TrimSpace(exam.Cpi) == "" {
+		return fmt.Errorf("entry page missing required ids")
+	}
+	if strings.TrimSpace(exam.CaptchaCaptchaId) != "" {
+		slider := xuexitong.XueXiTSlider{
+			CaptchaId: exam.CaptchaCaptchaId,
+			Referer:   refererURL,
+		}
+		var validate string
+		var passErr error
+		for i := 0; i < 5; i++ {
+			validate, passErr = slider.Pass(cache)
+			if passErr == nil && strings.TrimSpace(validate) != "" {
+				exam.Validate = validate
+				break
+			}
+			if passErr != nil && !strings.Contains(passErr.Error(), `"result":false`) {
+				break
+			}
+		}
+		if strings.TrimSpace(exam.Validate) == "" && passErr != nil {
+			return fmt.Errorf("captcha pass failed: %w", passErr)
+		}
+	}
+	paperHTML, err := xxtPullExamPaperWithCode(cache, exam, code, refererURL)
+	if err != nil {
+		return err
+	}
+	lower := strings.ToLower(paperHTML)
+	if strings.Contains(paperHTML, "考试码错误") || strings.Contains(paperHTML, "考试码不正确") || strings.Contains(paperHTML, "考试码为空") ||
+		strings.Contains(lower, "code error") {
+		return fmt.Errorf("exam code rejected: %s", xxtShortText(paperHTML, 160))
+	}
+	if dumpPath, dumpErr := xxtSaveExamEnterDebugDump(exam, "phone/start with code", refererURL, paperHTML); dumpErr == nil && dumpPath != "" && xlog != nil {
+		xlog(exam.Name, "direct exam-code entry: saved paper html="+dumpPath)
+	}
+	if exam.QuestionTotal <= 0 {
+		exam.QuestionTotal = xxtExtractExamQuestionTotal(paperHTML)
+	}
+	qsEntity, err := xuexitong.HtmlQuestionTurnEntity(paperHTML)
+	if err != nil {
+		return err
+	}
+	exam.Enc = qsEntity.Enc
+	exam.EncRemainTime = qsEntity.EncRemainTime
+	exam.EncLastUpdateTime = qsEntity.EncLastUpdateTime
+	if !xxtExamReady(exam) {
+		return fmt.Errorf("paper parsed but missing enc fields: encLen=%d remain=%s update=%s", len(exam.Enc), exam.EncRemainTime, exam.EncLastUpdateTime)
+	}
+	return nil
+}
+
+func xxtExtractExamQuestionTotal(raw string) int {
+	if strings.TrimSpace(raw) == "" {
+		return 0
+	}
+	patterns := []string{
+		`当前第\s*\d+\s*题\s*[;；]\s*共\s*(\d+)\s*题`,
+		`共\s*(\d+)\s*题`,
+		`(\d+)\s*/\s*(\d+)`,
+	}
+	for _, p := range patterns {
+		re := regexp.MustCompile(p)
+		if m := re.FindStringSubmatch(raw); len(m) > 1 {
+			idx := 1
+			if strings.Contains(p, `/`) && len(m) > 2 {
+				idx = 2
+			}
+			n, _ := strconv.Atoi(m[idx])
+			if n > 0 && n < 1000 {
+				return n
+			}
+		}
+	}
+	return 0
+}
+
+func xxtPullExamPaperWithCode(cache *xuexitongApi.XueXiTUserCache, exam *xuexitong.XXTExam, examCode, referer string) (string, error) {
+	q := url.Values{}
+	q.Set("courseId", exam.CourseId)
+	q.Set("classId", exam.ClazzId)
+	q.Set("examId", exam.ExamRelationId)
+	q.Set("source", "0")
+	q.Set("examAnswerId", exam.AnswerId)
+	q.Set("cpi", exam.Cpi)
+	q.Set("keyboardDisplayRequiresUserAction", "1")
+	q.Set("imei", xuexitongApi.IMEI)
+	q.Set("captchavalidate", exam.Validate)
+	q.Set("jt", "0")
+	q.Set("_v", fmt.Sprintf("%.16f", rand.Float64()))
+	q.Set("code", strings.TrimSpace(examCode))
+	urlStr := "https://mooc1-api.chaoxing.com/exam-ans/exam/phone/start?" + q.Encode() + "&faceDetectionResult&cxcid&cxtime&signt&_signcode=3&_signc=0&_signe=3-1&signk"
+	return xxtExamGET(cache, urlStr, referer)
+}
+
+func xxtExamReady(exam *xuexitong.XXTExam) bool {
+	return strings.TrimSpace(exam.ExamRelationId) != "" &&
+		strings.TrimSpace(exam.AnswerId) != "" &&
+		strings.TrimSpace(exam.Cpi) != "" &&
+		strings.TrimSpace(exam.Enc) != "" &&
+		strings.TrimSpace(exam.EncRemainTime) != "" &&
+		strings.TrimSpace(exam.EncLastUpdateTime) != ""
+}
+
+func tryXXTExamCode(cache *xuexitongApi.XueXiTUserCache, exam *xuexitong.XXTExam, examCode string) error {
+	code := url.QueryEscape(strings.TrimSpace(examCode))
+	baseParams := "examId=" + url.QueryEscape(exam.TaskRefId) +
+		"&examAnswerId=" + url.QueryEscape(exam.AnswerId) +
+		"&courseId=" + url.QueryEscape(exam.CourseId) +
+		"&classId=" + url.QueryEscape(exam.ClazzId) +
+		"&source=0&code=" + code
+	candidates := []string{
+		"https://mooc1-api.chaoxing.com/exam-ans/exam/phone/startOp?" + baseParams,
+		"https://mooc1-api.chaoxing.com/exam-ans/exam/phone/restartOp?" + baseParams,
+		"https://mooc1-api.chaoxing.com/exam-ans/exam/phone/task-exam?courseId=" + url.QueryEscape(exam.CourseId) +
+			"&classId=" + url.QueryEscape(exam.ClazzId) +
+			"&taskrefId=" + url.QueryEscape(exam.TaskRefId) +
+			"&examAnswerId=" + url.QueryEscape(exam.AnswerId) +
+			"&cpi=" + url.QueryEscape(exam.Cpi) +
+			"&ut=s&code=" + code + "&reset=true&protocol_v=1",
+	}
+	var lastErr error
+	for _, u := range candidates {
+		body, err := xxtExamGET(cache, u, "")
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if xxtExamCodeAccepted(body) {
+			return nil
+		}
+		lower := strings.ToLower(body)
+		if strings.Contains(lower, "error") || strings.Contains(lower, "fail") || strings.Contains(lower, "false") || strings.Contains(body, "??") || strings.Contains(body, "??") {
+			lastErr = fmt.Errorf("exam code endpoint rejected: %s", xxtShortText(body, 160))
+		}
+	}
+	if lastErr != nil {
+		return lastErr
+	}
+	return nil
+}
+
+func xxtExamCodeAccepted(body string) bool {
+	s := strings.TrimSpace(body)
+	if s == "" {
+		return true
+	}
+	if strings.Contains(s, `"status":true`) || strings.Contains(s, `"success":true`) || strings.Contains(s, `"result":true`) || strings.Contains(s, `"code":0`) || strings.Contains(s, "reVersionTestStartNew") || strings.Contains(s, "exam/phone/start") || strings.Contains(s, "questionWrap") || strings.Contains(s, "testPaperId") {
+		return true
+	}
+	if strings.Contains(strings.ToLower(s), "code error") || strings.Contains(strings.ToLower(s), "error") || strings.Contains(s, "?????") || strings.Contains(s, "????") || strings.Contains(s, "?????") {
+		return false
+	}
+	return len(s) < 20
+}
+
+func xxtExamGETWithFinalURL(cache *xuexitongApi.XueXiTUserCache, urlStr, referer string, timeout time.Duration) (string, string, error) {
+	finalURL := ""
+	client := &http.Client{
+		Timeout:   timeout,
+		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			finalURL = req.URL.String()
+			if len(via) > 0 {
+				for _, c := range via[0].Cookies() {
+					req.AddCookie(c)
+				}
+			}
+			return nil
+		},
+	}
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return "", "", err
+	}
+	req.Header.Set("User-Agent", xuexitongApi.XXTEXAMUA)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,application/json,text/javascript,*/*;q=0.8")
+	req.Header.Set("X-Requested-With", "com.chaoxing.mobile")
+	req.Header.Set("Accept-Language", "zh-CN,en-US;q=0.9")
+	if referer != "" {
+		req.Header.Set("Referer", referer)
+	}
+	for _, c := range cache.GetCookies() {
+		req.AddCookie(c)
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		return "", finalURL, err
+	}
+	defer res.Body.Close()
+	if finalURL == "" && res.Request != nil && res.Request.URL != nil {
+		finalURL = res.Request.URL.String()
+	}
+	body, _ := io.ReadAll(res.Body)
+	return string(body), finalURL, nil
+}
+
+func xxtExamGET(cache *xuexitongApi.XueXiTUserCache, urlStr, referer string) (string, error) {
+	body, _, err := xxtExamGETWithFinalURL(cache, urlStr, referer, 12*time.Second)
+	return body, err
+}
+
+func xxtShortText(raw string, n int) string {
+	s := strings.Join(strings.Fields(raw), " ")
+	if len([]rune(s)) > n {
+		return string([]rune(s)[:n]) + "..."
+	}
+	return s
+}
+
 func hasAIConfig(setting consoleConfig.Setting) bool {
 	ai := setting.AiSetting
 	return strings.TrimSpace(ai.APIKEY) != "" &&

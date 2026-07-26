@@ -6,6 +6,14 @@ export function AddAccount(arg1) {
   return window['go']['main']['App']['AddAccount'](arg1);
 }
 
+export function AnswerXXTExamCodeRequest(arg1, arg2) {
+  return window['go']['main']['App']['AnswerXXTExamCodeRequest'](arg1, arg2);
+}
+
+export function CancelXXTExamCodeRequest(arg1) {
+  return window['go']['main']['App']['CancelXXTExamCodeRequest'](arg1);
+}
+
 export function CheckForUpdates(arg1) {
   return window['go']['main']['App']['CheckForUpdates'](arg1);
 }
@@ -52,6 +60,10 @@ export function ImportConfig() {
 
 export function ListAccounts() {
   return window['go']['main']['App']['ListAccounts']();
+}
+
+export function ListXXTExamCodeRequests() {
+  return window['go']['main']['App']['ListXXTExamCodeRequests']();
 }
 
 export function OpenDataDir() {

@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "0.3.8",
+    [string]$Version = "0.4.0",
     [int]$ApiSchemaVersion = 1,
     [int]$AndroidApi = 24,
     [string]$Target = "android/arm64",
@@ -75,7 +75,7 @@ if (Test-Path $AarPath) {
 $SchemaSha256 = (Get-FileHash $SchemaTarget -Algorithm SHA256).Hash.ToLowerInvariant()
 
 $CoreVersion = [ordered]@{
-    androidVersion = ""
+    androidVersion = $Version
     desktopCoreVersion = $Version
     coreCommit = $Commit
     apiSchemaVersion = $ApiSchemaVersion

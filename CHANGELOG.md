@@ -1,6 +1,11 @@
-# 更新日志
+﻿# 更新日志
 
-## v0.3.8
+## v0.4.0
+
+- 同步上游 yatori-go-core 对应依赖版本并重新构建桌面端与 Android 移动核心。
+- 统一桌面端、移动核心、前端、Docker 标签和发布脚本版本号为 v0.4.0。
+
+## v0.3.9
 
 - 建立桌面版与 Android 版的稳定核心同步流程。
 - `mobilecore` 发布产物新增 `yatori-mobilecore-checksums.json`，并在 `yatori-core-version.json` 中记录 AAR SHA256、字节数、构建 target、Android API 和 core commit。
@@ -10,7 +15,7 @@
 - 修复 Android 导入账号功能只返回“不支持”的问题。
 - 修复 Android 壳层多处中文乱码。
 - 补充双仓库维护文档：桌面仓库维护核心，Android 仓库只做移动端适配和 APK 发布。
-- 同步桌面端、Android 端、Docker 和前端版本号到 v0.3.8。
+- 同步桌面端、Android 端、Docker 和前端版本号到 v0.3.9。
 
 ## v0.3.7
 
@@ -53,3 +58,4 @@
 
 - 重写 WeLearn 桌面安全 runner。
 - 优化 WeLearn 课程进度、学时解析和错误处理。
+

@@ -3,9 +3,9 @@ package service
 import (
 	"encoding/json"
 
-	consoleActivity "yatori-go-console/web/activity"
 	consoleConfig "yatori-go-console/config"
 	consolePojo "yatori-go-console/entity/pojo"
+	consoleActivity "yatori-go-console/web/activity"
 )
 
 // BuildUserFromPO 供 worker 子进程使用（已导出）
@@ -21,13 +21,21 @@ func buildUser(po AccountPO) consoleConfig.User {
 	_ = json.Unmarshal([]byte(po.CoursesCustom), &cc)
 	one, three := 1, 3
 	cxNode := cc.CxNode
-	if cxNode == nil { cxNode = &three }
+	if cxNode == nil {
+		cxNode = &three
+	}
 	cxChapter := cc.CxChapterTestSw
-	if cxChapter == nil { cxChapter = &one }
+	if cxChapter == nil {
+		cxChapter = &one
+	}
 	cxWork := cc.CxWorkSw
-	if cxWork == nil { cxWork = &one }
+	if cxWork == nil {
+		cxWork = &one
+	}
 	cxExam := cc.CxExamSw
-	if cxExam == nil { cxExam = &one }
+	if cxExam == nil {
+		cxExam = &one
+	}
 	return consoleConfig.User{
 		AccountType: po.AccountType, URL: po.URL, RemarkName: po.RemarkName,
 		Account: po.Account, Password: pwd, IsProxy: po.IsProxy,
@@ -47,13 +55,21 @@ func buildActivity(po AccountPO) consoleActivity.Activity {
 	_ = json.Unmarshal([]byte(po.CoursesCustom), &cc)
 	one, three := 1, 3
 	cxNode := cc.CxNode
-	if cxNode == nil { cxNode = &three }
+	if cxNode == nil {
+		cxNode = &three
+	}
 	cxChapter := cc.CxChapterTestSw
-	if cxChapter == nil { cxChapter = &one }
+	if cxChapter == nil {
+		cxChapter = &one
+	}
 	cxWork := cc.CxWorkSw
-	if cxWork == nil { cxWork = &one }
+	if cxWork == nil {
+		cxWork = &one
+	}
 	cxExam := cc.CxExamSw
-	if cxExam == nil { cxExam = &one }
+	if cxExam == nil {
+		cxExam = &one
+	}
 
 	user := consoleConfig.User{
 		AccountType: po.AccountType, URL: po.URL, RemarkName: po.RemarkName,

@@ -1,4 +1,4 @@
-# Mobilecore 发布流程
+﻿# Mobilecore 发布流程
 
 `yatori-go-desktop` 是桌面版和 Android 版共用的唯一核心仓库。Android 仓库不维护平台业务逻辑，只消费本仓库生成的 `mobilecore` AAR。
 
@@ -57,14 +57,14 @@ Android 仓库维护：
 运行：
 
 ```powershell
-.\scripts\build-mobilecore.ps1 -Version 0.3.8 -Target android/arm64 -ApiSchemaVersion 1
+.\scripts\build-mobilecore.ps1 -Version 0.4.0 -Target android/arm64 -ApiSchemaVersion 1
 ```
 
 会生成：
 
 ```text
 release/
-├── yatori-mobile-v0.3.8.aar
+├── yatori-mobile-v0.4.0.aar
 ├── api-schema.json
 ├── yatori-core-version.json
 └── yatori-mobilecore-checksums.json
@@ -88,3 +88,4 @@ release/
 当前 Android AAR 使用 `android/arm64`，只包含 `arm64-v8a` 原生库。不要默认使用 universal target，否则 APK 会包含多套 `libgojni.so`。
 
 继续大幅减小 APK 体积需要做移动端裁剪构建，例如用 build tags 排除 Android 不需要的平台、OCR/ONNX 或桌面专用依赖。
+

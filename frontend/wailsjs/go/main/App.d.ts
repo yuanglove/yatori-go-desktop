@@ -5,6 +5,10 @@ import {main} from '../models';
 
 export function AddAccount(arg1:service.AccountReq):Promise<main.BoolResult>;
 
+export function AnswerXXTExamCodeRequest(arg1:string,arg2:string):Promise<main.BoolResult>;
+
+export function CancelXXTExamCodeRequest(arg1:string):Promise<main.BoolResult>;
+
 export function CheckForUpdates(arg1:string):Promise<main.UpdateResult>;
 
 export function DeleteAccount(arg1:string):Promise<main.BoolResult>;
@@ -28,6 +32,8 @@ export function GetTaskStatuses():Promise<main.TaskStatusListResult>;
 export function ImportConfig():Promise<main.ConfigResult>;
 
 export function ListAccounts():Promise<main.AccountListResult>;
+
+export function ListXXTExamCodeRequests():Promise<main.XXTExamCodeRequestListResult>;
 
 export function OpenDataDir():Promise<main.BoolResult>;
 

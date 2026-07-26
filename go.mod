@@ -7,7 +7,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	github.com/wailsapp/wails/v2 v2.12.0
-	github.com/yatori-dev/yatori-go-core v1.9.1-0.20260513153113-72595587190d
+	github.com/yatori-dev/yatori-go-core v1.9.1-0.20260724131310-c9cddbeb4e4c
 	golang.org/x/text v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/sqlite v1.6.0

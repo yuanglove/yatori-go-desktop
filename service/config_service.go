@@ -78,20 +78,22 @@ type User struct {
 }
 
 type CoursesCustom struct {
-	StudyTime              string           `yaml:"studyTime,omitempty" json:"studyTime,omitempty"`
-	CxNode                 *int             `yaml:"cxNode,omitempty" json:"cxNode,omitempty"`
-	CxChapterTestSw        *int             `yaml:"cxChapterTestSw,omitempty" json:"cxChapterTestSw,omitempty"`
-	CxWorkSw               *int             `yaml:"cxWorkSw,omitempty" json:"cxWorkSw,omitempty"`
-	CxExamSw               *int             `yaml:"cxExamSw,omitempty" json:"cxExamSw,omitempty"`
-	ShuffleSw              int              `yaml:"shuffleSw" json:"shuffleSw"`
-	VideoModel             int              `yaml:"videoModel" json:"videoModel"`
-	AutoExam               int              `yaml:"autoExam" json:"autoExam"`
-	ExamAutoSubmit         int              `yaml:"examAutoSubmit" json:"examAutoSubmit"`
-	SubmitThresholdPercent int              `yaml:"submitThresholdPercent,omitempty" json:"submitThresholdPercent,omitempty"`
-	RandomAnswerOnFail     int              `yaml:"randomAnswerOnFail,omitempty" json:"randomAnswerOnFail,omitempty"`
-	ExcludeCourses         []string         `yaml:"excludeCourses" json:"excludeCourses"`
-	IncludeCourses         []string         `yaml:"includeCourses" json:"includeCourses"`
-	CoursesSettings        []CourseSettings `yaml:"coursesSettings,omitempty" json:"coursesSettings,omitempty"`
+	StudyTime              string            `yaml:"studyTime,omitempty" json:"studyTime,omitempty"`
+	CxNode                 *int              `yaml:"cxNode,omitempty" json:"cxNode,omitempty"`
+	CxChapterTestSw        *int              `yaml:"cxChapterTestSw,omitempty" json:"cxChapterTestSw,omitempty"`
+	CxWorkSw               *int              `yaml:"cxWorkSw,omitempty" json:"cxWorkSw,omitempty"`
+	CxExamSw               *int              `yaml:"cxExamSw,omitempty" json:"cxExamSw,omitempty"`
+	ShuffleSw              int               `yaml:"shuffleSw" json:"shuffleSw"`
+	VideoModel             int               `yaml:"videoModel" json:"videoModel"`
+	AutoExam               int               `yaml:"autoExam" json:"autoExam"`
+	ExamAutoSubmit         int               `yaml:"examAutoSubmit" json:"examAutoSubmit"`
+	SubmitThresholdPercent int               `yaml:"submitThresholdPercent,omitempty" json:"submitThresholdPercent,omitempty"`
+	RandomAnswerOnFail     int               `yaml:"randomAnswerOnFail,omitempty" json:"randomAnswerOnFail,omitempty"`
+	XxtAutoExamCode        *int              `yaml:"xxtAutoExamCode,omitempty" json:"xxtAutoExamCode,omitempty"`
+	XxtExamCodes           map[string]string `yaml:"xxtExamCodes,omitempty" json:"xxtExamCodes,omitempty"`
+	ExcludeCourses         []string          `yaml:"excludeCourses" json:"excludeCourses"`
+	IncludeCourses         []string          `yaml:"includeCourses" json:"includeCourses"`
+	CoursesSettings        []CourseSettings  `yaml:"coursesSettings,omitempty" json:"coursesSettings,omitempty"`
 }
 
 type CourseSettings struct {
@@ -221,27 +223,36 @@ func applyDefaults(cfg *AppConfig) {
 	if cfg.Setting.BasicSetting.MaxWorkers <= 0 {
 		cfg.Setting.BasicSetting.MaxWorkers = 3
 	}
+	for i := range cfg.Users {
+		NormalizeCoursesCustom(cfg.Users[i].AccountType, &cfg.Users[i].CoursesCustom)
+	}
+}
+
+func NormalizeCoursesCustom(accountType string, c *CoursesCustom) {
+	if c == nil {
+		return
+	}
 	one := 1
 	three := 3
-	for i := range cfg.Users {
-		c := &cfg.Users[i].CoursesCustom
-		if c.CxNode == nil {
-			c.CxNode = &three
-		}
-		if c.CxChapterTestSw == nil {
-			c.CxChapterTestSw = &one
-		}
-		if c.CxWorkSw == nil {
-			c.CxWorkSw = &one
-		}
-		if c.CxExamSw == nil {
-			c.CxExamSw = &one
-		}
-		if c.IncludeCourses == nil {
-			c.IncludeCourses = []string{}
-		}
-		if c.ExcludeCourses == nil {
-			c.ExcludeCourses = []string{}
-		}
+	if c.CxNode == nil {
+		c.CxNode = &three
+	}
+	if c.CxChapterTestSw == nil {
+		c.CxChapterTestSw = &one
+	}
+	if c.CxWorkSw == nil {
+		c.CxWorkSw = &one
+	}
+	if c.CxExamSw == nil {
+		c.CxExamSw = &one
+	}
+	if c.IncludeCourses == nil {
+		c.IncludeCourses = []string{}
+	}
+	if c.ExcludeCourses == nil {
+		c.ExcludeCourses = []string{}
+	}
+	if strings.EqualFold(accountType, "XUEXITONG") && c.XxtAutoExamCode == nil {
+		c.XxtAutoExamCode = &one
 	}
 }

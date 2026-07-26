@@ -24,6 +24,9 @@ export interface CoursesCustom {
   studyTime?: string; cxNode?: number; cxChapterTestSw?: number
   cxWorkSw?: number; cxExamSw?: number; shuffleSw: number
   videoModel: number; autoExam: number; examAutoSubmit: number
+  submitThresholdPercent?: number; randomAnswerOnFail?: number
+  xxtAutoExamCode?: number
+  xxtExamCodes?: Record<string, string>
   excludeCourses: string[]; includeCourses: string[]
 }
 export interface AccountVO {
