@@ -83,9 +83,8 @@ export default function Layout() {
     return () => window.clearInterval(timer)
   }, [examCodeReq, snoozedExamCodeReqs])
 
-  const openUpdate = () => {
+  const openUpdatePage = () => {
     api.openURL(updateInfo?.url || PROJECT_RELEASES_URL)
-    setUpdateInfo(null)
   }
 
   const submitExamCode = async () => {
@@ -171,7 +170,7 @@ export default function Layout() {
           </div>
           <div className="update-toast-actions">
             <button className="btn btn-ghost btn-sm" onClick={() => setUpdateInfo(null)}>{'稍后'}</button>
-            <button className="btn btn-primary btn-sm" onClick={openUpdate}>{'去更新'}</button>
+            <button className="btn btn-primary btn-sm" onClick={openUpdatePage}>{'去更新'}</button>
           </div>
         </div>
       )}
