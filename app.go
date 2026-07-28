@@ -114,7 +114,7 @@ func (a *App) startup(ctx context.Context) {
 		// 首次启动：确保 config.yaml 存在（LoadConfig 返回默认配置时写入磁盘）
 		if cfg, e := service.LoadConfig(path); e == nil {
 			_ = service.SaveConfig(path, cfg)
-			a.taskMgr.SetMaxWorkers(cfg.Setting.BasicSetting.MaxWorkers)
+			a.taskMgr.SetMaxWorkers(5)
 		}
 	}
 	// 初始化数据库（失败时只记录，不阻止启动）
@@ -148,7 +148,7 @@ func (a *App) SaveConfig(cfg service.AppConfig) BoolResult {
 	if err := service.SaveConfig(a.configPath, cfg); err != nil {
 		return BoolResult{Error: err.Error()}
 	}
-	a.taskMgr.SetMaxWorkers(cfg.Setting.BasicSetting.MaxWorkers)
+	a.taskMgr.SetMaxWorkers(5)
 	return BoolResult{Ok: true}
 }
 
@@ -398,35 +398,37 @@ func (a *App) GetCourses(uid string) CourseListResult {
 }
 
 func (a *App) CheckForUpdates(currentVersion string) UpdateResult {
-	latest, url, err := fetchLatestGitHubVersion()
+	release, err := fetchLatestGitHubRelease()
 	if err != nil {
 		return UpdateResult{Error: err.Error()}
 	}
 	current := normalizeVersion(currentVersion)
-	latestNorm := normalizeVersion(latest)
+	latestNorm := normalizeVersion(release.TagName)
 	return UpdateResult{Ok: true, Data: UpdateInfo{
 		HasUpdate:      compareVersions(latestNorm, current) > 0,
 		LatestVersion:  latestNorm,
 		CurrentVersion: current,
-		URL:            url,
+		URL:            release.HTMLURL,
 	}}
 }
 
-func fetchLatestGitHubVersion() (string, string, error) {
+type githubRelease struct {
+	TagName string `json:"tag_name"`
+	HTMLURL string `json:"html_url"`
+}
+
+func fetchLatestGitHubRelease() (githubRelease, error) {
 	client := &http.Client{Timeout: 12 * time.Second}
-	var release struct {
-		TagName string `json:"tag_name"`
-		HTMLURL string `json:"html_url"`
-	}
+	var release githubRelease
 	status, err := getJSON(client, "https://api.github.com/repos/yuanglove/yatori-go-desktop/releases/latest", &release)
 	if err == nil && release.TagName != "" {
 		if release.HTMLURL == "" {
 			release.HTMLURL = "https://github.com/yuanglove/yatori-go-desktop/releases"
 		}
-		return release.TagName, release.HTMLURL, nil
+		return release, nil
 	}
 	if err != nil && status != http.StatusNotFound {
-		return "", "", err
+		return githubRelease{}, err
 	}
 
 	var tags []struct {
@@ -434,12 +436,12 @@ func fetchLatestGitHubVersion() (string, string, error) {
 	}
 	_, err = getJSON(client, "https://api.github.com/repos/yuanglove/yatori-go-desktop/tags", &tags)
 	if err != nil {
-		return "", "", err
+		return githubRelease{}, err
 	}
 	if len(tags) == 0 || tags[0].Name == "" {
-		return "", "", fmt.Errorf("GitHub 暂无可用版本标签")
+		return githubRelease{}, fmt.Errorf("GitHub 暂无可用版本标签")
 	}
-	return tags[0].Name, "https://github.com/yuanglove/yatori-go-desktop/releases", nil
+	return githubRelease{TagName: tags[0].Name, HTMLURL: "https://github.com/yuanglove/yatori-go-desktop/releases"}, nil
 }
 
 func getJSON(client *http.Client, url string, out any) (int, error) {
