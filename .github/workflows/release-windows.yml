@@ -30,12 +30,15 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
 
+      - name: Fetch local core dependency
+        run: git clone --depth 1 https://github.com/yatori-dev/yatori-go-console.git ../yatori-go-console
+
       - name: Build Windows x64 executable
         shell: pwsh
         run: |
           $env:Path = "C:\msys64\ucrt64\bin;$env:Path"
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
-          wails build -platform windows/amd64 -o yatori-go-desktop-v0.4.0-windows-amd64.exe
+          wails build -s -skipbindings -platform windows/amd64 -o yatori-go-desktop-v0.4.0-windows-amd64.exe
 
       - name: Replace release asset
         shell: pwsh
