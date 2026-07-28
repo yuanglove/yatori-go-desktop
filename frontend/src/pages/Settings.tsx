@@ -378,22 +378,6 @@ export default function SettingsPage() {
         </div>
       </Section>
 
-      <Section title="任务并发">
-        <div className="alert alert-info" style={{ marginBottom: 12 }}>
-          {'控制桌面端最多同时运行的账号任务数量。超过上限时新任务会被拒绝启动。'}
-        </div>
-        <div style={{ maxWidth: 240 }}>
-          <FormGroup label="最大同时运行任务数 (1-10)">
-            <input
-              className="form-input"
-              type="number" min={1} max={10} step={1}
-              value={cfg.setting.basicSetting.maxWorkers ?? 3}
-              onChange={e => setBasic('maxWorkers', Math.min(10, Math.max(1, Number(e.target.value || 3))))}
-            />
-          </FormGroup>
-        </div>
-      </Section>
-
       <Section title="AI 设置" action={
         <button className="btn btn-ghost btn-sm" onClick={testAI} disabled={testing}>
           <Zap size={13} strokeWidth={2} style={{ marginRight: 4, verticalAlign: 'middle' }} />
