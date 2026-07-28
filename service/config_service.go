@@ -30,7 +30,6 @@ type BasicSetting struct {
 	LogModel       int    `yaml:"logModel" json:"logModel"`
 	WebModel       int    `yaml:"webModel" json:"webModel"`
 	Theme          string `yaml:"theme,omitempty" json:"theme,omitempty"`
-	MaxWorkers     int    `yaml:"maxWorkers,omitempty" json:"maxWorkers,omitempty"`
 }
 
 type EmailInform struct {
@@ -151,10 +150,6 @@ func ValidateConfig(cfg AppConfig) []string {
 			errs = append(errs, fmt.Sprintf("第 %d 个账号的 accountType 不能为空", i+1))
 		}
 	}
-	mw := cfg.Setting.BasicSetting.MaxWorkers
-	if mw != 0 && (mw < 1 || mw > 10) {
-		errs = append(errs, "maxWorkers 必须在 1-10 之间")
-	}
 	return errs
 }
 
@@ -168,7 +163,6 @@ func defaultConfig() AppConfig {
 				LogLevel:       "INFO",
 				LogModel:       0,
 				WebModel:       0,
-				MaxWorkers:     3,
 			},
 			ApiQueSetting: ApiQueSetting{Url: "http://localhost:8083", Protocol: "yatori", Method: "POST", ContentType: "json", AuthType: "none", QuestionField: "content", TypeField: "type", OptionsField: "options", CourseNameField: "courseName", OptionsFormat: "array", AnswerPath: "question.answers", AnswerSplit: "#"},
 			AiSetting:     AiSetting{AiType: "TONGYI"},
@@ -220,9 +214,6 @@ func applyDefaults(cfg *AppConfig) {
 		cfg.Setting.ApiQueSetting.AnswerSplit = "#"
 	}
 	cfg.Setting.ApiQueSetting = normalizeQuestionBankSetting(cfg.Setting.ApiQueSetting)
-	if cfg.Setting.BasicSetting.MaxWorkers <= 0 {
-		cfg.Setting.BasicSetting.MaxWorkers = 3
-	}
 	for i := range cfg.Users {
 		NormalizeCoursesCustom(cfg.Users[i].AccountType, &cfg.Users[i].CoursesCustom)
 	}
