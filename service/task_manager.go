@@ -53,23 +53,26 @@ type TaskManager struct {
 	maxWorkers int
 }
 
+const maxConcurrentAccountTasks = 5
+
 func NewTaskManager(emitter LogEmitter) *TaskManager {
-	return &TaskManager{tasks: make(map[string]*taskEntry), emitter: emitter, maxWorkers: 3}
+	return &TaskManager{tasks: make(map[string]*taskEntry), emitter: emitter, maxWorkers: maxConcurrentAccountTasks}
 }
 
 func (m *TaskManager) SetConfigPath(_ string) {}
 
-// SetMaxWorkers 更新全局并发上限（1-10），app.go 在 startup/SaveConfig 后调用
-func (m *TaskManager) SetMaxWorkers(n int) {
-	if n < 1 {
-		n = 1
-	}
-	if n > 10 {
-		n = 10
-	}
+// SetMaxWorkers remains for compatibility with older callers. Desktop task
+// concurrency is deliberately fixed at five accounts.
+func (m *TaskManager) SetMaxWorkers(_ int) {
 	m.mu.Lock()
-	m.maxWorkers = n
+	m.maxWorkers = maxConcurrentAccountTasks
 	m.mu.Unlock()
+}
+
+func (m *TaskManager) HasRunningTasks() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.runningCount() > 0
 }
 
 func (m *TaskManager) runningCount() int {
@@ -224,7 +227,8 @@ func (m *TaskManager) pipeLog(uid string, e *taskEntry, r io.Reader) {
 	for scanner.Scan() {
 		select {
 		case <-e.logDone:
-			for scanner.Scan() {}
+			for scanner.Scan() {
+			}
 			return
 		default:
 		}
@@ -232,7 +236,8 @@ func (m *TaskManager) pipeLog(uid string, e *taskEntry, r io.Reader) {
 		stopped := e.stopped
 		e.mu.Unlock()
 		if stopped {
-			for scanner.Scan() {}
+			for scanner.Scan() {
+			}
 			return
 		}
 		line := NormalizeLogText(scanner.Text())
