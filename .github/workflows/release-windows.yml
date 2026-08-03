@@ -30,6 +30,11 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
 
+      # frontend/dist is intentionally ignored by Git. Build it on the runner
+      # before Wails embeds the assets into the Windows executable.
+      - name: Build frontend assets
+        run: npm --prefix frontend run build
+
       - name: Fetch local core dependency
         run: git clone --depth 1 https://github.com/yatori-dev/yatori-go-console.git ../yatori-go-console
 
